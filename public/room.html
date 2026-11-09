@@ -22,6 +22,10 @@
     .deck-item.active { border-color: #10B981; background: rgba(16,185,129,.12); }
     .chip { background: #1E293B; border: 2px solid #334155; }
     .chip.active { background: #fff; color: #0F172A; border-color: #fff; }
+    .tab { background: #1E293B; border: 2px solid #334155; color: #94A3B8; }
+    .tab.active { background: #10B981; border-color: #10B981; color: #fff; }
+    #customInput { background: #0B1220; border: 2px solid #334155; font-family: ui-monospace, Menlo, Consolas, 'Noto Sans JP', monospace; resize: none; }
+    #customInput:focus { outline: none; border-color: #3B82F6; }
     .footer { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(to top, #0F172A 70%, transparent); }
   </style>
 </head>
@@ -54,17 +58,41 @@
     </div>
   </section>
 
-  <!-- HOST: PILIH DECK -->
   <main class="flex-1 min-h-0 flex flex-col px-4 pt-4">
     <!-- Host panel -->
     <div id="hostPanel" class="hidden flex-1 min-h-0 flex-col">
-      <div class="flex items-center justify-between mb-2 shrink-0">
-        <h2 class="font-black text-sm uppercase tracking-widest text-slate-300"><i class="fa-solid fa-layer-group mr-1.5"></i>Pilih Deck</h2>
-        <span id="selectedCount" class="text-[11px] font-bold text-emerald-400">0 dipilih</span>
+      <!-- Tab sumber soal -->
+      <div class="grid grid-cols-2 gap-2 mb-3 shrink-0" id="modeTabs">
+        <button type="button" class="tab active rounded-xl py-2 text-xs font-black uppercase tracking-wider" data-mode="deck"><i class="fa-solid fa-layer-group mr-1.5"></i>Pilih Deck</button>
+        <button type="button" class="tab rounded-xl py-2 text-xs font-black uppercase tracking-wider" data-mode="custom"><i class="fa-solid fa-code mr-1.5"></i>Custom JSON</button>
       </div>
-      <div id="deckList" class="scroll flex-1 min-h-0 space-y-2 pb-2">
-        <div class="text-slate-500 text-sm text-center py-6"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat deck...</div>
+
+      <!-- Mode: deck -->
+      <div id="deckMode" class="flex-1 min-h-0 flex flex-col">
+        <div class="flex items-center justify-between mb-2 shrink-0">
+          <h2 class="font-black text-sm uppercase tracking-widest text-slate-300">Deck</h2>
+          <span id="selectedCount" class="text-[11px] font-bold text-emerald-400">0 dipilih</span>
+        </div>
+        <div id="deckList" class="scroll flex-1 min-h-0 space-y-2 pb-2">
+          <div class="text-slate-500 text-sm text-center py-6"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat deck...</div>
+        </div>
       </div>
+
+      <!-- Mode: custom -->
+      <div id="customMode" class="hidden flex-1 min-h-0 flex-col">
+        <div class="flex items-center justify-between mb-2 shrink-0">
+          <h2 class="font-black text-sm uppercase tracking-widest text-slate-300">Paste JSON</h2>
+          <button type="button" id="btnExample" class="text-[11px] font-bold text-blue-400 underline">Isi contoh</button>
+        </div>
+        <textarea id="customInput" spellcheck="false" autocomplete="off" autocapitalize="off"
+          class="flex-1 min-h-0 w-full rounded-2xl p-3 text-xs text-slate-100 scroll"
+          placeholder='[
+  {"kanji":"学校","furigana":"がっこう","arti":"sekolah"},
+  {"kanji":"先生","furigana":"せんせい","arti":"guru"}
+]'></textarea>
+        <p id="customStatus" class="shrink-0 text-[11px] font-bold mt-1.5 text-slate-500 min-h-[16px]">Tempel daftar kanji (minimal 4, cara baca berbeda).</p>
+      </div>
+
       <div class="shrink-0 pt-2">
         <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Jumlah Soal</p>
         <div class="grid grid-cols-4 gap-2" id="limitChips">
@@ -79,8 +107,8 @@
     <!-- Player panel -->
     <div id="guestPanel" class="hidden flex-1 flex-col items-center justify-center text-center">
       <div class="glass rounded-3xl p-5 w-full">
-        <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">Deck Dipilih Host</p>
-        <p id="guestDecks" class="font-bold text-base leading-snug">Host belum memilih deck</p>
+        <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">Sumber Soal Dari Host</p>
+        <p id="guestDecks" class="font-bold text-base leading-snug">Host belum memilih soal</p>
         <p id="guestLimit" class="text-sm text-slate-400 mt-1"></p>
       </div>
     </div>
@@ -129,6 +157,71 @@
   let decksLoaded = false;
   let redirected = false;
 
+  // --- state fitur custom ---
+  let mode = "deck";        // "deck" | "custom"
+  let customCards = null;   // array valid, atau null jika belum valid
+
+  const EXAMPLE = `[
+  {"kanji":"学校","furigana":"がっこう","arti":"sekolah"},
+  {"kanji":"先生","furigana":"せんせい","arti":"guru"},
+  {"kanji":"学生","furigana":"がくせい","arti":"pelajar"},
+  {"kanji":"友達","furigana":"ともだち","arti":"teman"},
+  {"kanji":"水","furigana":"みず","arti":"air"}
+]`;
+
+  function parseCustom(text) {
+    const t = text.trim();
+    if (!t) return { cards: null, msg: "Tempel daftar kanji (minimal 4, cara baca berbeda).", ok: false, neutral: true };
+    let data;
+    try { data = JSON.parse(t); }
+    catch (e) { return { cards: null, msg: "JSON tidak valid: " + e.message, ok: false }; }
+    if (!Array.isArray(data)) return { cards: null, msg: "Harus berupa array [ ... ].", ok: false };
+    if (data.length > 500) return { cards: null, msg: "Maksimal 500 kosakata.", ok: false };
+    const cards = [];
+    for (let i = 0; i < data.length; i++) {
+      const c = data[i] || {};
+      const kanji = String(c.kanji ?? "").trim();
+      const furigana = String(c.furigana ?? c.carabaca ?? "").trim();
+      const arti = String(c.arti ?? "").trim();
+      if (!kanji || !furigana || !arti) {
+        return { cards: null, msg: `Item #${i + 1} kurang lengkap (kanji, furigana, arti).`, ok: false };
+      }
+      cards.push({ kanji, furigana, arti });
+    }
+    const uniq = new Set(cards.map((c) => c.furigana.replace(/\s+/g, "").toLowerCase()));
+    if (cards.length < 4 || uniq.size < 4) {
+      return { cards: null, msg: `Baru ${cards.length} kata (${uniq.size} cara baca unik). Minimal 4 cara baca berbeda.`, ok: false };
+    }
+    return { cards, msg: `✔ ${cards.length} kosakata valid`, ok: true };
+  }
+
+  function validateCustom() {
+    const r = parseCustom($("customInput").value);
+    customCards = r.cards;
+    const el = $("customStatus");
+    el.textContent = r.msg;
+    el.className = "shrink-0 text-[11px] font-bold mt-1.5 min-h-[16px] " +
+      (r.ok ? "text-emerald-400" : r.neutral ? "text-slate-500" : "text-red-400");
+    pushSettings();
+  }
+
+  function setMode(m) {
+    mode = m;
+    document.querySelectorAll("#modeTabs .tab").forEach((t) => t.classList.toggle("active", t.dataset.mode === m));
+    $("deckMode").classList.toggle("hidden", m !== "deck");
+    $("customMode").classList.toggle("hidden", m !== "custom");
+    $("customMode").classList.toggle("flex", m === "custom");
+    if (m === "custom") validateCustom(); else pushSettings();
+  }
+
+  document.querySelectorAll("#modeTabs .tab").forEach((t) => { t.onclick = () => setMode(t.dataset.mode); });
+  $("customInput").addEventListener("input", validateCustom);
+  $("btnExample").onclick = () => { $("customInput").value = EXAMPLE; validateCustom(); };
+
+  function isReady() {
+    return mode === "deck" ? selected.size > 0 : !!customCards;
+  }
+
   function refreshStartButton() {
     const btn = $("btnStart");
     btn.className = "w-full rounded-2xl font-black text-lg uppercase tracking-wider transition";
@@ -143,9 +236,9 @@
       btn.className += " bg-slate-800 text-slate-500";
       btn.textContent = "Waiting for Player...";
       btn.disabled = true;
-    } else if (selected.size === 0) {
+    } else if (!isReady()) {
       btn.className += " bg-slate-800 text-slate-500";
-      btn.textContent = "Pilih deck dulu";
+      btn.textContent = mode === "deck" ? "Pilih deck dulu" : "Isi JSON yang valid";
       btn.disabled = true;
     } else {
       btn.className += " bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-[0_10px_30px_rgba(16,185,129,.4)]";
@@ -195,14 +288,18 @@
     refreshStartButton();
   }
 
+  // Sinkron info sumber soal ke Firebase (untuk ditampilkan ke player)
   function pushSettings() {
     $("selectedCount").textContent = selected.size + " dipilih";
-    const chosen = decks.filter((d) => selected.has(d.id));
-    update(ref(db, `rooms/${roomId}/settings`), {
-      deckIds: chosen.map((d) => d.id),
-      deckNames: chosen.map((d) => d.name),
-      limit
-    }).catch(console.error);
+    let deckIds = [], deckNames = [];
+    if (mode === "deck") {
+      const chosen = decks.filter((d) => selected.has(d.id));
+      deckIds = chosen.map((d) => d.id);
+      deckNames = chosen.map((d) => d.name);
+    } else if (customCards) {
+      deckNames = [`Custom (${customCards.length} kosakata)`];
+    }
+    update(ref(db, `rooms/${roomId}/settings`), { mode, deckIds, deckNames, limit }).catch(console.error);
     refreshStartButton();
   }
 
@@ -250,7 +347,6 @@
         $("playerName").classList.remove("text-slate-500");
       }
 
-      // Panel sesuai peran
       $("hostPanel").classList.toggle("hidden", !isHost);
       $("hostPanel").classList.toggle("flex", isHost);
       $("guestPanel").classList.toggle("hidden", isHost);
@@ -261,7 +357,7 @@
       } else {
         const s = data.settings;
         const names = s && s.deckNames ? Object.values(s.deckNames) : [];
-        $("guestDecks").textContent = names.length ? names.join(", ") : "Host belum memilih deck";
+        $("guestDecks").textContent = names.length ? names.join(", ") : "Host belum memilih soal";
         $("guestLimit").textContent = s && s.limit ? s.limit + " soal" : "";
       }
 
@@ -276,13 +372,22 @@
 
   // HANYA HOST yang bisa memulai
   $("btnStart").onclick = async () => {
-    if (!isHost || !hasPlayer || selected.size === 0) return;
+    if (!isHost || !hasPlayer || !isReady()) return;
     const btn = $("btnStart");
     btn.textContent = "Creating Arena...";
     btn.disabled = true;
 
     try {
-      const res = await fetch(`/api/battle/generate?limit=${limit}&deckIds=${[...selected].join(",")}`);
+      let res;
+      if (mode === "custom") {
+        res = await fetch("/api/battle/generate-custom", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ limit, cards: customCards })
+        });
+      } else {
+        res = await fetch(`/api/battle/generate?limit=${limit}&deckIds=${[...selected].join(",")}`);
+      }
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
 

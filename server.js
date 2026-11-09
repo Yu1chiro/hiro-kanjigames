@@ -16,7 +16,7 @@ const pool = new Pool({
 
 pool.on("error", (e) => console.error("Postgres error:", e.message));
 app.disable("x-powered-by");
-app.use(express.json());
+app.use(express.json({ limit: "512kb" }));
 
 // CORS
 app.use((req, res, next) => {
@@ -58,7 +58,28 @@ const norm = (v) =>
     .replace(/\s+/g, "")
     .toLowerCase();
 
-// --- DAFTAR DECK UNTUK HOST (minimal 4 kartu aktif agar bisa jadi pilihan ganda) ---
+// Bangun soal pilihan ganda dari daftar kartu (dipakai deck & custom)
+function buildQuestions(allCards, limit) {
+  const selected = shuffle(allCards).slice(0, limit);
+  return selected.map((card) => {
+    const seen = new Set([norm(card.furigana)]);
+    const distractors = [];
+    for (const c of shuffle(allCards)) {
+      const k = norm(c.furigana);
+      if (c === card || seen.has(k)) continue;
+      seen.add(k);
+      distractors.push({ text: c.furigana, isCorrect: false });
+      if (distractors.length === 3) break;
+    }
+    const options = shuffle([
+      { text: card.furigana, isCorrect: true },
+      ...distractors,
+    ]);
+    return { kanji: card.kanji, arti: card.arti, options };
+  });
+}
+
+// --- DAFTAR DECK UNTUK HOST ---
 app.get(
   "/api/battle/decks",
   asyncRoute(async (req, res) => {
@@ -75,7 +96,7 @@ app.get(
   }),
 );
 
-// --- GENERATE SOAL BERDASARKAN DECK YANG DIPILIH HOST ---
+// --- GENERATE SOAL DARI DECK ---
 app.get(
   "/api/battle/generate",
   asyncRoute(async (req, res) => {
@@ -108,26 +129,47 @@ app.get(
       });
     }
 
-    const selected = shuffle(allCards).slice(0, limit);
+    res.json({ data: buildQuestions(allCards, limit) });
+  }),
+);
 
-    const questions = selected.map((card) => {
-      const seen = new Set([norm(card.furigana)]);
-      const distractors = [];
-      for (const c of shuffle(allCards)) {
-        const k = norm(c.furigana);
-        if (c.id === card.id || seen.has(k)) continue;
-        seen.add(k);
-        distractors.push({ text: c.furigana, isCorrect: false });
-        if (distractors.length === 3) break;
+// --- GENERATE SOAL DARI DAFTAR KANJI CUSTOM (JSON) ---
+// Body: { limit: 20, cards: [{ kanji, furigana (atau carabaca), arti }] }
+app.post(
+  "/api/battle/generate-custom",
+  asyncRoute(async (req, res) => {
+    const limit = Math.max(5, Math.min(50, Number(req.body.limit) || 20));
+    const raw = req.body.cards;
+
+    if (!Array.isArray(raw) || !raw.length) {
+      return res.status(400).json({ error: "Daftar kanji kosong atau format salah." });
+    }
+    if (raw.length > 500) {
+      return res.status(400).json({ error: "Maksimal 500 kosakata." });
+    }
+
+    const cards = [];
+    for (let i = 0; i < raw.length; i++) {
+      const c = raw[i] || {};
+      const kanji = String(c.kanji ?? "").trim().slice(0, 60);
+      const furigana = String(c.furigana ?? c.carabaca ?? "").trim().slice(0, 60);
+      const arti = String(c.arti ?? "").trim().slice(0, 200);
+      if (!kanji || !furigana || !arti) {
+        return res.status(400).json({
+          error: `Item #${i + 1} tidak lengkap (butuh kanji, furigana, arti).`,
+        });
       }
-      const options = shuffle([
-        { text: card.furigana, isCorrect: true },
-        ...distractors,
-      ]);
-      return { kanji: card.kanji, arti: card.arti, options };
-    });
+      cards.push({ kanji, furigana, arti });
+    }
 
-    res.json({ data: questions });
+    const uniqueReadings = new Set(cards.map((c) => norm(c.furigana)));
+    if (cards.length < 4 || uniqueReadings.size < 4) {
+      return res.status(400).json({
+        error: "Minimal 4 kosakata dengan cara baca berbeda.",
+      });
+    }
+
+    res.json({ data: buildQuestions(cards, limit) });
   }),
 );
 
