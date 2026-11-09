@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0F172A">
+  <title>Arena | Kanji Battle</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+JP:wght@700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <style>
+    html, body { height: 100%; }
+    body { font-family: 'Inter', sans-serif; background: #0F172A; color: #fff; overflow: hidden; touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
+    .jp { font-family: 'Noto Sans JP', sans-serif; }
+
+    .app { height: 100vh; height: 100dvh; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; background: #0F172A; position: relative;
+      padding-top: env(safe-area-inset-top); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+
+    /* HEADER */
+    .topbar { padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(15,23,42,.95); border-bottom: 1px solid #1E293B; flex-shrink: 0; }
+    .pbox { display: flex; align-items: center; gap: 8px; width: 42%; min-width: 0; }
+    .pbox.right { flex-direction: row-reverse; text-align: right; }
+    .pavatar { width: clamp(34px, 10vw, 44px); height: clamp(34px, 10vw, 44px); border-radius: 9999px; border: 2px solid #475569; object-fit: cover; flex-shrink: 0; }
+    .pname { font-size: 10px; font-weight: 700; color: #94A3B8; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hp-heart { font-size: clamp(11px, 3.2vw, 14px); color: #EF4444; margin: 0 1px; }
+    .hp-heart.lost { color: #1E293B; }
+    .pexp { font-size: 10px; font-weight: 700; color: #4ADE80; margin-top: 1px; }
+    .vs { font-size: clamp(16px, 5vw, 22px); font-weight: 900; font-style: italic; color: #FBBF24; flex-shrink: 0; }
+
+    /* ARENA */
+    .arena { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px 16px; position: relative; }
+    .arena::before { content: ""; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(30,64,175,.1), rgba(127,29,29,.1)); pointer-events: none; }
+    .pill { font-size: 11px; font-weight: 900; letter-spacing: .12em; color: #94A3B8; background: rgba(30,41,59,.85); border: 1px solid #334155; padding: 5px 14px; border-radius: 9999px; text-transform: uppercase; margin-bottom: clamp(10px, 3vh, 24px); position: relative; }
+    .kanji { font-size: clamp(52px, 19vw, 96px); font-weight: 900; line-height: 1.1; text-align: center; width: 100%; overflow-wrap: anywhere; word-break: break-all; text-shadow: 0 0 30px rgba(255,255,255,.2); position: relative; }
+    .qcount { position: relative; margin-top: clamp(8px, 2vh, 16px); font-size: 12px; font-weight: 700; color: #64748B; }
+
+    @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+    .shake-anim { animation: shake .3s ease-in-out; }
+
+    /* TIMER */
+    .timer-wrap { height: 8px; background: #1E293B; flex-shrink: 0; }
+    .timer-bar { height: 100%; width: 100%; background: linear-gradient(to right, #FACC15, #EF4444); transition: width 1s linear; }
+
+    /* OPTIONS */
+    .options { padding: 12px 12px calc(14px + env(safe-area-inset-bottom)); background: #0F172A; flex-shrink: 0; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(8px, 2.5vw, 12px); }
+    .btn-option { background: #1E293B; border: 2px solid #334155; border-radius: 18px; color: #fff; font-weight: 700;
+      min-height: clamp(56px, 11vh, 84px); padding: 8px 10px; font-size: clamp(16px, 4.8vw, 22px); line-height: 1.2; overflow-wrap: anywhere; display: flex; align-items: center; justify-content: center; text-align: center; transition: transform .12s, background .12s; }
+    .btn-option:active:not(:disabled) { transform: scale(.96); background: #334155; }
+    .btn-correct { background: #10B981 !important; border-color: #059669 !important; box-shadow: 0 0 22px rgba(16,185,129,.5); }
+    .btn-wrong { background: #EF4444 !important; border-color: #B91C1C !important; box-shadow: 0 0 22px rgba(239,68,68,.5); }
+
+    /* OVERLAYS */
+    .overlay { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.92); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center;
+      padding-bottom: calc(24px + env(safe-area-inset-bottom)); padding-top: calc(24px + env(safe-area-inset-top)); }
+    .overlay.hidden { display: none; }
+    .ov-inner { width: 100%; max-width: 420px; }
+    .title-red { font-size: clamp(34px, 11vw, 52px); font-weight: 900; text-transform: uppercase; letter-spacing: .1em; background: linear-gradient(to bottom, #F87171, #B91C1C); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px; }
+    .btn-big { width: 100%; min-height: 56px; border-radius: 18px; font-weight: 900; font-size: 18px; }
+    .btn-white { background: #fff; color: #0F172A; }
+    .btn-dark { background: #1E293B; color: #94A3B8; }
+    .btn-white:active, .btn-dark:active { transform: scale(.97); }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <audio id="sfx-correct" src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_0625c1539c.mp3" preload="auto"></audio>
+  <audio id="sfx-wrong" src="https://cdn.pixabay.com/download/audio/2022/03/10/audio_c8c8a73467.mp3" preload="auto"></audio>
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="pbox">
+      <img id="p1Avatar" src="" alt="" class="pavatar">
+      <div class="min-w-0">
+        <div class="pname" id="p1Name">Player 1</div>
+        <div id="p1HpContainer" style="white-space: nowrap"></div>
+        <div class="pexp" id="p1Exp">0 EXP</div>
+      </div>
+    </div>
+    <div class="vs">VS</div>
+    <div class="pbox right">
+      <img id="p2Avatar" src="" alt="" class="pavatar">
+      <div class="min-w-0">
+        <div class="pname" id="p2Name">Player 2</div>
+        <div id="p2HpContainer" style="white-space: nowrap"></div>
+        <div class="pexp" id="p2Exp">0 EXP</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- KANJI -->
+  <main class="arena" id="arenaMain">
+    <div class="pill">Pilih Cara Baca</div>
+    <div id="kanjiDisplay" class="kanji jp">&nbsp;</div>
+    <div id="qCount" class="qcount"></div>
+  </main>
+
+  <div class="timer-wrap"><div id="timerBar" class="timer-bar"></div></div>
+
+  <!-- OPTIONS -->
+  <footer class="options">
+    <div class="grid2" id="optionsGrid"></div>
+  </footer>
+
+  <!-- START OVERLAY: hanya host yang bisa menekan FIGHT -->
+  <div id="startOverlay" class="overlay">
+    <div class="ov-inner">
+      <h1 class="title-red">ARENA READY</h1>
+      <button id="btnFight" class="btn-big btn-white hidden" style="box-shadow: 0 0 40px rgba(255,255,255,.3)">FIGHT!</button>
+      <div id="waitHost" class="text-slate-300 font-bold text-lg hidden"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Menunggu host memulai...</div>
+    </div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="gameOverOverlay" class="overlay hidden">
+    <div class="ov-inner">
+      <h1 class="font-black uppercase tracking-widest mb-2" style="font-size: clamp(32px, 10vw, 48px)" id="winnerText">YOU WIN!</h1>
+      <p class="text-lg font-bold text-slate-400 mb-8" id="expResult">Total EXP: 0</p>
+      <button onclick="window.location.href='/'" class="btn-big btn-white mb-3">PLAY AGAIN</button>
+      <button id="btnLobby" class="btn-big btn-dark" style="font-size: 16px">BACK TO LOBBY</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import { getDatabase, ref, onValue, update, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDAijNVFhFmTEMDqY-EKAtIXF6vXD1Hafg",
+    authDomain: "kanji-battle-6a0cb.firebaseapp.com",
+    databaseURL: "https://kanji-battle-6a0cb-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "kanji-battle-6a0cb",
+    storageBucket: "kanji-battle-6a0cb.firebasestorage.app",
+    messagingSenderId: "859882453524",
+    appId: "1:859882453524:web:35065123791df56224c501",
+    measurementId: "G-5XP3KCCNXM"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
+
+  const $ = (id) => document.getElementById(id);
+  const roomId = new URLSearchParams(window.location.search).get("id");
+  if (!roomId) window.location.href = "/";
+
+  let currentUser = null;
+  let myRole = null;
+  let oppRole = null;
+  let questions = [];
+  let shownIndex = -1;
+  let timerInterval;
+  let timeLeft = 15;
+  let isProcessing = false;
+  let gameOverShown = false;
+  let doneSent = false;
+  let finishing = false;
+
+  const sfxCorrect = $("sfx-correct");
+  const sfxWrong = $("sfx-wrong");
+  const play = (el) => { try { el.currentTime = 0; el.play().catch(() => {}); } catch (e) {} };
+
+  // Unlock audio di sentuhan pertama (iOS / Android)
+  function unlockAudio() {
+    [sfxCorrect, sfxWrong].forEach((a) => {
+      a.muted = true;
+      a.play().then(() => { a.pause(); a.currentTime = 0; a.muted = false; }).catch(() => { a.muted = false; });
+    });
+    window.removeEventListener("pointerdown", unlockAudio);
+  }
+  window.addEventListener("pointerdown", unlockAudio, { once: true });
+
+  // BACK TO LOBBY -> kembali ke room yang sama (bukan logout / halaman awal)
+  $("btnLobby").onclick = () => { window.location.href = `/room?id=${roomId}`; };
+
+  // HANYA HOST yang bisa memulai fight
+  $("btnFight").onclick = async () => {
+    if (myRole !== "host") return;
+    $("btnFight").disabled = true;
+    try {
+      await update(ref(db, `rooms/${roomId}`), { fightStarted: true, fightAt: Date.now() });
+    } catch (e) {
+      console.error(e);
+      $("btnFight").disabled = false;
+    }
+  };
+
+  function decideWinner(d) {
+    const h = d.host, p = d.player;
+    if ((h.hp || 0) !== (p.hp || 0)) return (h.hp || 0) > (p.hp || 0) ? h.uid : p.uid;
+    if ((h.exp || 0) !== (p.exp || 0)) return (h.exp || 0) > (p.exp || 0) ? h.uid : p.uid;
+    return "draw";
+  }
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user) return (window.location.href = "/");
+    currentUser = user;
+
+    onValue(ref(db, `rooms/${roomId}`), (snapshot) => {
+      const data = snapshot.val();
+      if (!data || !data.host || !data.player) return;
+
+      myRole = data.host.uid === currentUser.uid ? "host" : "player";
+      oppRole = myRole === "host" ? "player" : "host";
+      questions = data.questions ? Object.values(data.questions) : [];
+
+      renderPlayerUI("p1", data[myRole]);
+      renderPlayerUI("p2", data[oppRole]);
+
+      if (data.status === "finished") {
+        return showGameOver(data.winner, data[myRole].exp || 0);
+      }
+
+      // Overlay start: host punya tombol, player menunggu
+      if (!data.fightStarted) {
+        $("startOverlay").classList.remove("hidden");
+        $("btnFight").classList.toggle("hidden", myRole !== "host");
+        $("waitHost").classList.toggle("hidden", myRole === "host");
+        return;
+      }
+      $("startOverlay").classList.add("hidden");
+
+      // Kondisi selesai (dicek host)
+      const bothDone = data.host.done && data.player.done;
+      const someoneDead = (data.host.hp || 0) <= 0 || (data.player.hp || 0) <= 0;
+      if ((someoneDead || bothDone) && myRole === "host" && !finishing) {
+        finishing = true;
+        update(ref(db, `rooms/${roomId}`), { status: "finished", winner: decideWinner(data) });
+        return;
+      }
+      if (someoneDead || bothDone) return;
+
+      // Soal independen per pemain
+      const myIndex = data[myRole].qIndex || 0;
+      if (myIndex >= questions.length) {
+        clearInterval(timerInterval);
+        $("kanjiDisplay").textContent = "✓";
+        $("optionsGrid").innerHTML = "";
+        $("qCount").textContent = "Menunggu lawan selesai...";
+        if (!doneSent) {
+          doneSent = true;
+          update(ref(db, `rooms/${roomId}/${myRole}`), { done: true });
+        }
+        return;
+      }
+      if (myIndex !== shownIndex) {
+        shownIndex = myIndex;
+        loadQuestion(myIndex);
+      }
+    });
+  });
+
+  function renderPlayerUI(prefix, p) {
+    $(`${prefix}Name`).textContent = p.name || "Player";
+    if ($(`${prefix}Avatar`).getAttribute("src") !== (p.photo || "")) $(`${prefix}Avatar`).src = p.photo || "";
+    $(`${prefix}Exp`).textContent = `${p.exp || 0} EXP`;
+    let hearts = "";
+    for (let i = 0; i < 5; i++) {
+      hearts += `<i class="fa-solid fa-heart hp-heart ${i >= (p.hp || 0) ? "lost" : ""}"></i>`;
+    }
+    $(`${prefix}HpContainer`).innerHTML = hearts;
+  }
+
+  function loadQuestion(index) {
+    isProcessing = false;
+    const q = questions[index];
+    const kanjiEl = $("kanjiDisplay");
+    kanjiEl.textContent = q.kanji;
+    // Kanji panjang diperkecil otomatis
+    const len = [...String(q.kanji)].length;
+    kanjiEl.style.fontSize = len <= 2 ? "" : len <= 4 ? "clamp(44px, 15vw, 76px)" : len <= 6 ? "clamp(34px, 11vw, 56px)" : "clamp(26px, 8vw, 40px)";
+    $("qCount").textContent = `Soal ${index + 1} / ${questions.length}`;
+
+    const grid = $("optionsGrid");
+    grid.innerHTML = "";
+    const opts = Array.isArray(q.options) ? q.options : Object.values(q.options);
+    opts.forEach((opt, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn-option jp";
+      b.textContent = opt.text;
+      b.onclick = () => selectAnswer(i, !!opt.isCorrect);
+      grid.appendChild(b);
+    });
+    resetTimer();
+  }
+
+  function resetTimer() {
+    clearInterval(timerInterval);
+    timeLeft = 15;
+    const bar = $("timerBar");
+    bar.style.transition = "none";
+    bar.style.width = "100%";
+    void bar.offsetWidth;
+    bar.style.transition = "width 1s linear";
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      bar.style.width = `${(timeLeft / 15) * 100}%`;
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        handleTimeOut();
+      }
+    }, 1000);
+  }
+
+  function shake() {
+    const m = $("arenaMain");
+    m.classList.add("shake-anim");
+    setTimeout(() => m.classList.remove("shake-anim"), 300);
+  }
+
+  function handleTimeOut() {
+    if (isProcessing) return;
+    isProcessing = true;
+    play(sfxWrong);
+    shake();
+    document.querySelectorAll(".btn-option").forEach((b) => (b.disabled = true));
+    update(ref(db, `rooms/${roomId}/${myRole}`), { hp: increment(-1), qIndex: increment(1) });
+  }
+
+  function selectAnswer(index, isCorrect) {
+    if (isProcessing) return;
+    isProcessing = true;
+    clearInterval(timerInterval);
+
+    const buttons = document.querySelectorAll(".btn-option");
+    buttons.forEach((b) => (b.disabled = true));
+    const selectedBtn = buttons[index];
+    const base = `rooms/${roomId}/${myRole}`;
+    const updates = {};
+    updates[`${base}/qIndex`] = increment(1);
+
+    if (isCorrect) {
+      play(sfxCorrect);
+      selectedBtn.classList.add("btn-correct");
+      updates[`${base}/exp`] = increment(20);
+    } else {
+      play(sfxWrong);
+      selectedBtn.classList.add("btn-wrong");
+      updates[`${base}/hp`] = increment(-1);
+      updates[`${base}/exp`] = increment(-5);
+      shake();
+      // Tunjukkan jawaban benar
+      const q = questions[shownIndex];
+      const opts = Array.isArray(q.options) ? q.options : Object.values(q.options);
+      const ci = opts.findIndex((o) => o.isCorrect);
+      if (ci >= 0 && buttons[ci]) buttons[ci].classList.add("btn-correct");
+    }
+
+    setTimeout(() => update(ref(db), updates), 700);
+  }
+
+  function showGameOver(winnerUid, myExp) {
+    if (gameOverShown) return;
+    gameOverShown = true;
+    clearInterval(timerInterval);
+    $("startOverlay").classList.add("hidden");
+    $("gameOverOverlay").classList.remove("hidden");
+    $("expResult").textContent = `Total EXP: ${myExp}`;
+    const title = $("winnerText");
+    if (winnerUid === "draw") {
+      title.textContent = "DRAW 🤝";
+      title.classList.add("text-slate-200");
+    } else if (winnerUid === currentUser.uid) {
+      title.textContent = "YOU WIN! 🏆";
+      title.classList.add("text-yellow-400");
+    } else {
+      title.textContent = "YOU LOSE! 💀";
+      title.classList.add("text-red-500");
+    }
+  }
+</script>
+</body>
+</html>

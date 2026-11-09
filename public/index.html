@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0F172A">
+  <title>Kanji Battle | Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <style>
+    html, body { height: 100%; }
+    body { font-family: 'Inter', sans-serif; background: #0F172A; color: #F8FAFC; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    .app { min-height: 100vh; min-height: 100dvh; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: calc(20px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left)); position: relative; }
+    .glass-panel { background: rgba(30,41,59,.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,.1); }
+    .btn-battle { background: linear-gradient(135deg, #EF4444, #B91C1C); color: #fff; transition: transform .1s; }
+    .btn-join { background: linear-gradient(135deg, #3B82F6, #1D4ED8); color: #fff; transition: transform .1s; }
+    .btn-battle:active, .btn-join:active { transform: scale(.96); }
+    .h-btn { height: 56px; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="fixed inset-0 overflow-hidden -z-10 pointer-events-none flex justify-center items-center">
+    <div class="absolute w-80 h-80 bg-red-600/20 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/4"></div>
+    <div class="absolute w-80 h-80 bg-blue-600/20 rounded-full blur-[100px] translate-x-1/2 translate-y-1/4"></div>
+  </div>
+
+  <div class="text-center mb-8">
+    <h1 class="font-black tracking-tighter mb-2 text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-blue-400 uppercase" style="font-size: clamp(34px, 11vw, 48px)">Kanji Battle</h1>
+    <p class="text-slate-400 font-bold tracking-widest text-xs uppercase">Real-time Multiplayer</p>
+  </div>
+
+  <!-- AUTH -->
+  <div id="authSection" class="glass-panel p-6 rounded-[28px] w-full text-center">
+    <div class="w-16 h-16 mx-auto bg-slate-800 rounded-full flex items-center justify-center text-3xl mb-5 shadow-lg shadow-black/50">
+      <i class="fa-solid fa-fire text-red-500"></i>
+    </div>
+    <button id="btnLogin" class="h-btn w-full rounded-2xl bg-white text-slate-900 font-bold text-base flex items-center justify-center gap-3 active:scale-95 transition">
+      <i class="fa-brands fa-google text-red-500 text-lg"></i> Login with Google
+    </button>
+  </div>
+
+  <!-- MENU -->
+  <div id="menuSection" class="glass-panel p-5 rounded-[28px] w-full text-center hidden">
+    <div class="flex items-center gap-3 mb-6 bg-slate-800/80 p-3 rounded-2xl border border-slate-700">
+      <img id="userAvatar" src="" alt="" class="w-12 h-12 rounded-xl object-cover shadow-sm shrink-0">
+      <div class="text-left min-w-0">
+        <div class="font-bold text-base text-white truncate" id="userName">Player</div>
+        <div class="text-[10px] text-emerald-400 font-bold tracking-widest uppercase"><i class="fa-solid fa-circle text-[7px] mr-1"></i> Online</div>
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      <button id="btnCreateRoom" class="btn-battle h-btn w-full rounded-2xl font-black text-lg uppercase tracking-wider shadow-lg shadow-red-900/40">
+        <i class="fa-solid fa-khanda mr-2"></i> Create Room
+      </button>
+
+      <div class="flex items-center gap-3">
+        <div class="flex-grow border-t border-slate-700"></div>
+        <span class="text-slate-500 font-bold text-[11px] tracking-widest uppercase">OR JOIN CODE</span>
+        <div class="flex-grow border-t border-slate-700"></div>
+      </div>
+
+      <div class="flex gap-2">
+        <input type="text" id="roomCodeInput" placeholder="CODE" autocapitalize="characters" autocomplete="off" class="h-btn min-w-0 flex-1 bg-slate-900 border border-slate-700 rounded-2xl px-3 text-center font-black text-xl uppercase tracking-widest focus:outline-none focus:border-blue-500 text-white" maxlength="5">
+        <button id="btnJoinRoom" class="btn-join h-btn w-16 shrink-0 rounded-2xl font-bold text-lg shadow-lg shadow-blue-900/40"><i class="fa-solid fa-right-to-bracket"></i></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDAijNVFhFmTEMDqY-EKAtIXF6vXD1Hafg",
+    authDomain: "kanji-battle-6a0cb.firebaseapp.com",
+    databaseURL: "https://kanji-battle-6a0cb-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "kanji-battle-6a0cb",
+    storageBucket: "kanji-battle-6a0cb.firebasestorage.app",
+    messagingSenderId: "859882453524",
+    appId: "1:859882453524:web:35065123791df56224c501",
+    measurementId: "G-5XP3KCCNXM"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
+  let currentUser = null;
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      currentUser = user;
+      document.getElementById("authSection").classList.add("hidden");
+      document.getElementById("menuSection").classList.remove("hidden");
+      document.getElementById("userName").textContent = user.displayName || "Warrior";
+      document.getElementById("userAvatar").src = user.photoURL || "";
+    }
+  });
+
+  document.getElementById("btnLogin").onclick = () => {
+    signInWithPopup(auth, new GoogleAuthProvider()).catch(console.error);
+  };
+
+  const generateCode = () => Math.random().toString(36).substring(2, 7).toUpperCase();
+  const me = () => ({ uid: currentUser.uid, name: currentUser.displayName || "Warrior", photo: currentUser.photoURL || "", hp: 5, exp: 0, qIndex: 0 });
+
+  document.getElementById("btnCreateRoom").onclick = async () => {
+    const roomCode = generateCode();
+    await set(ref(db, `rooms/${roomCode}`), {
+      status: "waiting",
+      host: me(),
+      created_at: Date.now()
+    });
+    window.location.href = `/room?id=${roomCode}`;
+  };
+
+  document.getElementById("btnJoinRoom").onclick = async () => {
+    const code = document.getElementById("roomCodeInput").value.trim().toUpperCase();
+    if (!code) return alert("Masukkan Room Code!");
+
+    const snapshot = await get(ref(db, `rooms/${code}`));
+    if (!snapshot.exists()) return alert("Room tidak ditemukan!");
+    const room = snapshot.val();
+
+    // Host yang kembali ke room sendiri
+    if (room.host.uid === currentUser.uid) {
+      window.location.href = `/room?id=${code}`;
+      return;
+    }
+    // Player yang kembali ke room yang sama
+    if (room.player && room.player.uid === currentUser.uid) {
+      window.location.href = room.status === "playing" ? `/game-mode?id=${code}` : `/room?id=${code}`;
+      return;
+    }
+    if (room.status !== "waiting") return alert("Game sudah dimulai atau selesai.");
+    if (room.player) return alert("Room sudah penuh.");
+
+    await set(ref(db, `rooms/${code}/player`), me());
+    window.location.href = `/room?id=${code}`;
+  };
+</script>
+</body>
+</html>

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0F172A">
+  <title>Lobby | Kanji Battle</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Noto+Sans+JP:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <style>
+    html, body { height: 100%; }
+    body { font-family: 'Inter', sans-serif; background: #0F172A; color: #fff; overflow: hidden; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    .app { height: 100vh; height: 100dvh; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column;
+      padding-top: env(safe-area-inset-top); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+    .glass { background: rgba(30,41,59,.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,.1); }
+    .vs-text { background: linear-gradient(#EF4444,#F59E0B); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .avatar { width: clamp(56px, 17vw, 80px); height: clamp(56px, 17vw, 80px); border-radius: 9999px; object-fit: cover; }
+    .scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+    .deck-item { background: #1E293B; border: 2px solid #334155; transition: all .15s; }
+    .deck-item:active { transform: scale(.98); }
+    .deck-item.active { border-color: #10B981; background: rgba(16,185,129,.12); }
+    .chip { background: #1E293B; border: 2px solid #334155; }
+    .chip.active { background: #fff; color: #0F172A; border-color: #fff; }
+    .footer { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(to top, #0F172A 70%, transparent); }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER: ROOM CODE -->
+  <header class="text-center pt-4 pb-2 px-4 shrink-0">
+    <p class="text-slate-400 font-bold uppercase tracking-widest text-[11px]">Room Code</p>
+    <h1 class="font-black tracking-[0.2em] text-white leading-none" style="font-size: clamp(32px, 11vw, 48px)" id="roomCodeDisplay">-----</h1>
+  </header>
+
+  <!-- PLAYERS -->
+  <section class="glass mx-4 rounded-3xl px-4 py-3 shrink-0">
+    <div class="flex items-center justify-between gap-2">
+      <div class="flex flex-col items-center gap-1 w-5/12 min-w-0">
+        <img id="hostAvatar" src="" alt="" class="avatar border-[3px] border-red-500 shadow-[0_0_16px_rgba(239,68,68,.4)]">
+        <span class="font-bold text-sm truncate max-w-full" id="hostName">Waiting...</span>
+        <span class="text-[9px] bg-red-500/20 text-red-400 px-2.5 py-0.5 rounded-full font-black uppercase tracking-widest">Host</span>
+      </div>
+      <div class="text-3xl font-black italic vs-text">VS</div>
+      <div class="flex flex-col items-center gap-1 w-5/12 min-w-0">
+        <div id="playerAvatarContainer" class="avatar border-[3px] border-blue-500 border-dashed flex items-center justify-center bg-slate-800">
+          <i class="fa-solid fa-user-astronaut text-xl text-slate-500"></i>
+        </div>
+        <img id="playerAvatar" src="" alt="" class="avatar border-[3px] border-blue-500 shadow-[0_0_16px_rgba(59,130,246,.4)] hidden">
+        <span class="font-bold text-sm text-slate-500 truncate max-w-full" id="playerName">Waiting Player...</span>
+        <span class="text-[9px] bg-blue-500/20 text-blue-400 px-2.5 py-0.5 rounded-full font-black uppercase tracking-widest">Player</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOST: PILIH DECK -->
+  <main class="flex-1 min-h-0 flex flex-col px-4 pt-4">
+    <!-- Host panel -->
+    <div id="hostPanel" class="hidden flex-1 min-h-0 flex-col">
+      <div class="flex items-center justify-between mb-2 shrink-0">
+        <h2 class="font-black text-sm uppercase tracking-widest text-slate-300"><i class="fa-solid fa-layer-group mr-1.5"></i>Pilih Deck</h2>
+        <span id="selectedCount" class="text-[11px] font-bold text-emerald-400">0 dipilih</span>
+      </div>
+      <div id="deckList" class="scroll flex-1 min-h-0 space-y-2 pb-2">
+        <div class="text-slate-500 text-sm text-center py-6"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat deck...</div>
+      </div>
+      <div class="shrink-0 pt-2">
+        <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Jumlah Soal</p>
+        <div class="grid grid-cols-4 gap-2" id="limitChips">
+          <button class="chip rounded-xl py-2 text-sm font-black" data-limit="10">10</button>
+          <button class="chip rounded-xl py-2 text-sm font-black active" data-limit="20">20</button>
+          <button class="chip rounded-xl py-2 text-sm font-black" data-limit="30">30</button>
+          <button class="chip rounded-xl py-2 text-sm font-black" data-limit="50">50</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Player panel -->
+    <div id="guestPanel" class="hidden flex-1 flex-col items-center justify-center text-center">
+      <div class="glass rounded-3xl p-5 w-full">
+        <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">Deck Dipilih Host</p>
+        <p id="guestDecks" class="font-bold text-base leading-snug">Host belum memilih deck</p>
+        <p id="guestLimit" class="text-sm text-slate-400 mt-1"></p>
+      </div>
+    </div>
+  </main>
+
+  <!-- START -->
+  <footer class="footer shrink-0">
+    <button id="btnStart" class="w-full rounded-2xl bg-slate-800 text-slate-500 font-black text-lg uppercase tracking-wider transition" style="height: 56px" disabled>
+      Waiting for Player...
+    </button>
+  </footer>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDAijNVFhFmTEMDqY-EKAtIXF6vXD1Hafg",
+    authDomain: "kanji-battle-6a0cb.firebaseapp.com",
+    databaseURL: "https://kanji-battle-6a0cb-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "kanji-battle-6a0cb",
+    storageBucket: "kanji-battle-6a0cb.firebasestorage.app",
+    messagingSenderId: "859882453524",
+    appId: "1:859882453524:web:35065123791df56224c501",
+    measurementId: "G-5XP3KCCNXM"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
+
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(window.location.search);
+  const roomId = params.get("id");
+  if (!roomId) window.location.href = "/";
+  $("roomCodeDisplay").textContent = roomId;
+
+  let currentUser = null;
+  let isHost = false;
+  let hasPlayer = false;
+  let decks = [];
+  let selected = new Set();
+  let limit = 20;
+  let decksLoaded = false;
+  let redirected = false;
+
+  function refreshStartButton() {
+    const btn = $("btnStart");
+    btn.className = "w-full rounded-2xl font-black text-lg uppercase tracking-wider transition";
+    btn.style.height = "56px";
+    if (!isHost) {
+      btn.className += " bg-slate-800 text-slate-400";
+      btn.textContent = hasPlayer ? "Menunggu host memulai..." : "Waiting for Player...";
+      btn.disabled = true;
+      return;
+    }
+    if (!hasPlayer) {
+      btn.className += " bg-slate-800 text-slate-500";
+      btn.textContent = "Waiting for Player...";
+      btn.disabled = true;
+    } else if (selected.size === 0) {
+      btn.className += " bg-slate-800 text-slate-500";
+      btn.textContent = "Pilih deck dulu";
+      btn.disabled = true;
+    } else {
+      btn.className += " bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-[0_10px_30px_rgba(16,185,129,.4)]";
+      btn.textContent = "Start Battle!";
+      btn.disabled = false;
+    }
+  }
+
+  function renderDecks() {
+    const list = $("deckList");
+    list.innerHTML = "";
+    if (!decks.length) {
+      list.innerHTML = '<div class="text-slate-500 text-sm text-center py-6">Belum ada deck dengan minimal 4 kosakata.</div>';
+      return;
+    }
+    decks.forEach((d) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "deck-item w-full rounded-2xl px-4 py-3 flex items-center gap-3 text-left" + (selected.has(d.id) ? " active" : "");
+      const icon = document.createElement("div");
+      icon.className = "w-10 h-10 rounded-xl flex items-center justify-center shrink-0";
+      icon.style.background = (/^#[0-9a-fA-F]{6}$/.test(d.color) ? d.color : "#89AED9") + "33";
+      icon.style.color = /^#[0-9a-fA-F]{6}$/.test(d.color) ? d.color : "#89AED9";
+      const i = document.createElement("i");
+      i.className = "fa-solid " + (String(d.icon || "fa-book-open").replace(/[^a-z0-9\- ]/gi, ""));
+      icon.appendChild(i);
+      const info = document.createElement("div");
+      info.className = "min-w-0 flex-1";
+      const n = document.createElement("div");
+      n.className = "font-bold text-[15px] truncate";
+      n.textContent = d.name;
+      const c = document.createElement("div");
+      c.className = "text-[11px] text-slate-400 font-semibold";
+      c.textContent = d.card_count + " kosakata";
+      info.append(n, c);
+      const check = document.createElement("i");
+      check.className = "fa-solid " + (selected.has(d.id) ? "fa-circle-check text-emerald-400" : "fa-circle text-slate-600") + " text-xl shrink-0";
+      btn.append(icon, info, check);
+      btn.onclick = () => {
+        if (selected.has(d.id)) selected.delete(d.id); else selected.add(d.id);
+        renderDecks();
+        pushSettings();
+      };
+      list.appendChild(btn);
+    });
+    $("selectedCount").textContent = selected.size + " dipilih";
+    refreshStartButton();
+  }
+
+  function pushSettings() {
+    $("selectedCount").textContent = selected.size + " dipilih";
+    const chosen = decks.filter((d) => selected.has(d.id));
+    update(ref(db, `rooms/${roomId}/settings`), {
+      deckIds: chosen.map((d) => d.id),
+      deckNames: chosen.map((d) => d.name),
+      limit
+    }).catch(console.error);
+    refreshStartButton();
+  }
+
+  async function loadDecks() {
+    if (decksLoaded) return;
+    decksLoaded = true;
+    try {
+      const res = await fetch("/api/battle/decks");
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      decks = json.data;
+      renderDecks();
+    } catch (e) {
+      $("deckList").innerHTML = '<div class="text-red-400 text-sm text-center py-6">Gagal memuat deck: ' + String(e.message).replace(/</g, "&lt;") + "</div>";
+      decksLoaded = false;
+    }
+  }
+
+  document.querySelectorAll("#limitChips .chip").forEach((chip) => {
+    chip.onclick = () => {
+      limit = Number(chip.dataset.limit);
+      document.querySelectorAll("#limitChips .chip").forEach((c) => c.classList.toggle("active", c === chip));
+      pushSettings();
+    };
+  });
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user) return (window.location.href = "/");
+    currentUser = user;
+
+    onValue(ref(db, `rooms/${roomId}`), (snapshot) => {
+      const data = snapshot.val();
+      if (!data) { alert("Room Invalid"); window.location.href = "/"; return; }
+
+      isHost = data.host.uid === currentUser.uid;
+      $("hostAvatar").src = data.host.photo || "";
+      $("hostName").textContent = data.host.name;
+
+      hasPlayer = !!data.player;
+      if (data.player) {
+        $("playerAvatarContainer").classList.add("hidden");
+        $("playerAvatar").classList.remove("hidden");
+        $("playerAvatar").src = data.player.photo || "";
+        $("playerName").textContent = data.player.name;
+        $("playerName").classList.remove("text-slate-500");
+      }
+
+      // Panel sesuai peran
+      $("hostPanel").classList.toggle("hidden", !isHost);
+      $("hostPanel").classList.toggle("flex", isHost);
+      $("guestPanel").classList.toggle("hidden", isHost);
+      $("guestPanel").classList.toggle("flex", !isHost);
+
+      if (isHost) {
+        loadDecks();
+      } else {
+        const s = data.settings;
+        const names = s && s.deckNames ? Object.values(s.deckNames) : [];
+        $("guestDecks").textContent = names.length ? names.join(", ") : "Host belum memilih deck";
+        $("guestLimit").textContent = s && s.limit ? s.limit + " soal" : "";
+      }
+
+      refreshStartButton();
+
+      if (data.status === "playing" && !redirected) {
+        redirected = true;
+        window.location.href = `/game-mode?id=${roomId}`;
+      }
+    });
+  });
+
+  // HANYA HOST yang bisa memulai
+  $("btnStart").onclick = async () => {
+    if (!isHost || !hasPlayer || selected.size === 0) return;
+    const btn = $("btnStart");
+    btn.textContent = "Creating Arena...";
+    btn.disabled = true;
+
+    try {
+      const res = await fetch(`/api/battle/generate?limit=${limit}&deckIds=${[...selected].join(",")}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+
+      await update(ref(db, `rooms/${roomId}`), {
+        questions: json.data,
+        fightStarted: false,
+        winner: null,
+        "host/hp": 5, "host/exp": 0, "host/qIndex": 0, "host/done": null,
+        "player/hp": 5, "player/exp": 0, "player/qIndex": 0, "player/done": null,
+        status: "playing"
+      });
+    } catch (err) {
+      alert(err.message);
+      refreshStartButton();
+    }
+  };
+</script>
+</body>
+</html>
