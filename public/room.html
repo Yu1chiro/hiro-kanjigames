@@ -27,6 +27,29 @@
     #customInput { background: #0B1220; border: 2px solid #334155; font-family: ui-monospace, Menlo, Consolas, 'Noto Sans JP', monospace; resize: none; }
     #customInput:focus { outline: none; border-color: #3B82F6; }
     .footer { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(to top, #0F172A 70%, transparent); }
+  
+    /* ===== Lobby BGM (tambahan) ===== */
+    .bgm-btn { position: fixed; z-index: 40; top: calc(12px + env(safe-area-inset-top)); right: max(12px, calc(50% - 228px));
+      width: 44px; height: 44px; border-radius: 9999px; display: flex; align-items: center; justify-content: center;
+      background: rgba(30,41,59,.85); border: 1px solid rgba(255,255,255,.15); color: #fff; font-size: 17px;
+      backdrop-filter: blur(8px); transition: transform .1s, background .2s; }
+    .bgm-btn:active { transform: scale(.92); }
+    .bgm-btn.on { background: rgba(16,185,129,.9); border-color: #10B981; box-shadow: 0 0 16px rgba(16,185,129,.45); }
+    .bgm-btn.on i { animation: bgmPulse 1.6s ease-in-out infinite; }
+    @keyframes bgmPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+    .bgm-overlay { position: fixed; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center; padding: 24px;
+      background: rgba(2,6,23,.75); backdrop-filter: blur(6px); }
+    .bgm-overlay.show { display: flex; }
+    .bgm-card { width: 100%; max-width: 360px; text-align: center; padding: 24px 20px; border-radius: 28px;
+      background: rgba(30,41,59,.95); border: 1px solid rgba(255,255,255,.12); box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+    .bgm-ico { width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 9999px; display: flex; align-items: center; justify-content: center;
+      font-size: 28px; color: #10B981; background: rgba(16,185,129,.15); }
+    .bgm-card h3 { font-weight: 900; font-size: 18px; margin-bottom: 6px; }
+    .bgm-card p { font-size: 13px; color: #94A3B8; line-height: 1.5; margin-bottom: 18px; }
+    .bgm-yes, .bgm-no { width: 100%; height: 50px; border-radius: 16px; font-weight: 900; font-size: 14px; letter-spacing: .05em; text-transform: uppercase; }
+    .bgm-yes { background: linear-gradient(135deg, #10B981, #059669); color: #fff; margin-bottom: 8px; box-shadow: 0 8px 24px rgba(16,185,129,.35); }
+    .bgm-no { background: transparent; color: #94A3B8; font-weight: 700; }
+    .bgm-yes:active, .bgm-no:active { transform: scale(.97); }
   </style>
 </head>
 <body>
@@ -393,10 +416,13 @@
 
       await update(ref(db, `rooms/${roomId}`), {
         questions: json.data,
+        tiebreakQuestions: json.tiebreak || null,
+        tiebreak: null,
+        winReason: null,
         fightStarted: false,
         winner: null,
-        "host/hp": 5, "host/exp": 0, "host/qIndex": 0, "host/done": null,
-        "player/hp": 5, "player/exp": 0, "player/qIndex": 0, "player/done": null,
+        "host/hp": 5, "host/exp": 0, "host/qIndex": 0, "host/done": null, "host/finishedAt": null, "host/history": null,
+        "player/hp": 5, "player/exp": 0, "player/qIndex": 0, "player/done": null, "player/finishedAt": null, "player/history": null,
         status: "playing"
       });
     } catch (err) {
@@ -404,6 +430,148 @@
       refreshStartButton();
     }
   };
+</script>
+
+<!-- ===== Lobby BGM (tambahan) ===== -->
+<button type="button" id="bgmToggle" class="bgm-btn" aria-label="Aktif/nonaktifkan musik" title="Musik">
+  <i class="fa-solid fa-volume-xmark"></i>
+</button>
+
+<div id="bgmOverlay" class="bgm-overlay" role="dialog" aria-modal="true" aria-labelledby="bgmTitle">
+  <div class="bgm-card">
+    <div class="bgm-ico"><i class="fa-solid fa-music"></i></div>
+    <h3 id="bgmTitle">Aktifkan Musik?</h3>
+    <p>Izinkan backsound di lobby agar pengalaman bermain makin seru. Kamu bisa mematikannya kapan saja lewat tombol speaker di pojok kanan atas.</p>
+    <button type="button" id="bgmAllow" class="bgm-yes"><i class="fa-solid fa-volume-high mr-2"></i>Izinkan Musik</button>
+    <button type="button" id="bgmDeny" class="bgm-no">Nanti saja</button>
+  </div>
+</div>
+
+<script>
+/* ===== Lobby BGM (tambahan, berdiri sendiri) ===== */
+(function () {
+  var PREF_KEY = "kb_lobby_music";   // "on" | "off" (tersimpan di perangkat pemain)
+  var BGM_URL  = "";                 // OPSIONAL: isi URL mp3 untuk pakai musik sendiri, kosongkan = musik bawaan (sintesis)
+  var VOLUME   = 0.5;
+
+  var btn = document.getElementById("bgmToggle");
+  var overlay = document.getElementById("bgmOverlay");
+  var wantOn = false, playing = false;
+  var ctx, master, bus, timer, nextTime = 0, step = 0, audioEl = null;
+
+  function getPref() { try { return localStorage.getItem(PREF_KEY); } catch (e) { return null; } }
+  function setPref(v) { try { localStorage.setItem(PREF_KEY, v); } catch (e) {} }
+
+  function paintBtn() {
+    btn.classList.toggle("on", wantOn);
+    btn.innerHTML = '<i class="fa-solid ' + (wantOn ? "fa-volume-high" : "fa-volume-xmark") + '"></i>';
+  }
+
+  // ---------- Musik bawaan (Web Audio, tanpa file) ----------
+  var SCALE = [293.66, 329.63, 349.23, 440.00, 466.16];  // D E F A Bb (nuansa Jepang)
+  var BASS  = [73.42, 55.00, 58.27, 55.00];              // D2 A1 Bb1 A1
+  var PAD   = [[146.83, 220.00], [110.00, 164.81], [116.54, 174.61], [110.00, 164.81]];
+  var STEP_SEC = 0.36;
+
+  function initAudio() {
+    if (ctx) return;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    ctx = new AC();
+    master = ctx.createGain(); master.gain.value = 0; master.connect(ctx.destination);
+    bus = ctx.createGain(); bus.connect(master);
+    var delay = ctx.createDelay(1.0); delay.delayTime.value = STEP_SEC * 3;
+    var fb = ctx.createGain(); fb.gain.value = 0.32;
+    var wet = ctx.createGain(); wet.gain.value = 0.35;
+    bus.connect(delay); delay.connect(fb); fb.connect(delay); delay.connect(wet); wet.connect(master);
+  }
+
+  function tone(freq, t, dur, type, vol, attack) {
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + (attack || 0.01));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(bus);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+
+  function playStep(s, t) {
+    var bar = Math.floor(s / 16) % 4, pos = s % 16;
+    if (pos === 0) {
+      tone(BASS[bar], t, STEP_SEC * 8, "sine", 0.22, 0.05);
+      PAD[bar].forEach(function (f) { tone(f, t, STEP_SEC * 15, "triangle", 0.07, 0.8); });
+    }
+    if (pos === 8) tone(BASS[bar] * 2, t, STEP_SEC * 4, "sine", 0.10, 0.03);
+    if (pos % 2 === 0 && Math.random() < 0.65) {
+      var f = SCALE[Math.floor(Math.random() * SCALE.length)] * (Math.random() < 0.3 ? 2 : 1);
+      tone(f, t, STEP_SEC * 3, "triangle", 0.11, 0.008);
+    }
+    if (pos % 4 === 2) tone(1200, t, 0.05, "square", 0.012, 0.002);
+  }
+
+  function schedule() {
+    while (nextTime < ctx.currentTime + 0.35) { playStep(step, nextTime); nextTime += STEP_SEC; step++; }
+  }
+
+  function startMusic() {
+    if (playing) return;
+    if (BGM_URL) {
+      if (!audioEl) { audioEl = new Audio(BGM_URL); audioEl.loop = true; audioEl.volume = VOLUME; }
+      var p = audioEl.play(); if (p && p.catch) p.catch(function () {});
+      playing = true; return;
+    }
+    initAudio(); if (!ctx) return;
+    playing = true;
+    ctx.resume();
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setTargetAtTime(VOLUME, ctx.currentTime, 0.4);
+    nextTime = ctx.currentTime + 0.1;
+    clearInterval(timer); timer = setInterval(schedule, 100);
+  }
+
+  function stopMusic() {
+    if (!playing) return;
+    playing = false;
+    if (audioEl) { audioEl.pause(); return; }
+    clearInterval(timer);
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setTargetAtTime(0, ctx.currentTime, 0.15);
+    setTimeout(function () { if (!playing && ctx) ctx.suspend(); }, 600);
+  }
+
+  // ---------- UI ----------
+  function turnOn()  { wantOn = true;  setPref("on");  paintBtn(); startMusic(); }
+  function turnOff() { wantOn = false; setPref("off"); paintBtn(); stopMusic(); }
+
+  btn.addEventListener("click", function () { wantOn ? turnOff() : turnOn(); });
+  document.getElementById("bgmAllow").addEventListener("click", function () { overlay.classList.remove("show"); turnOn(); });
+  document.getElementById("bgmDeny").addEventListener("click", function () { overlay.classList.remove("show"); turnOff(); });
+
+  // Pause saat tab/app disembunyikan, lanjut saat kembali
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) { if (playing) { if (audioEl) audioEl.pause(); else if (ctx) ctx.suspend(); } }
+    else if (wantOn && playing) { if (audioEl) { var p = audioEl.play(); if (p && p.catch) p.catch(function () {}); } else if (ctx) ctx.resume(); }
+  });
+
+  var pref = getPref();
+  if (pref === "on") {
+    // Browser butuh interaksi pertama sebelum audio boleh bunyi → mulai otomatis di tap/klik pertama
+    wantOn = true; paintBtn();
+    var kick = function () {
+      document.removeEventListener("pointerdown", kick, true);
+      document.removeEventListener("keydown", kick, true);
+      if (wantOn) startMusic();
+    };
+    document.addEventListener("pointerdown", kick, true);
+    document.addEventListener("keydown", kick, true);
+  } else if (pref === "off") {
+    paintBtn();
+  } else {
+    paintBtn();
+    overlay.classList.add("show");   // pertama kali: minta izin
+  }
+})();
 </script>
 </body>
 </html>

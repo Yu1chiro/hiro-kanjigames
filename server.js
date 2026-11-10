@@ -3,6 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const { Pool } = require("pg");
+const { randomInt } = require("crypto");
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -34,6 +35,7 @@ app.use(express.static(ROOT));
 
 // --- ROUTES VIEW ---
 app.get("/", (req, res) => res.sendFile(path.join(ROOT, "index.html")));
+app.get("/backsound", (req, res) => res.sendFile(path.join(ROOT, "backsound.mp3")));
 app.get("/room", (req, res) => res.sendFile(path.join(ROOT, "room.html")));
 app.get("/game-mode", (req, res) =>
   res.sendFile(path.join(ROOT, "game-mode.html")),
@@ -46,7 +48,7 @@ function asyncRoute(fn) {
 function shuffle(array) {
   const a = [...array];
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = randomInt(i + 1); // Fisher-Yates, RNG kriptografis (tanpa bias)
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
@@ -58,25 +60,31 @@ const norm = (v) =>
     .replace(/\s+/g, "")
     .toLowerCase();
 
-// Bangun soal pilihan ganda dari daftar kartu (dipakai deck & custom)
-function buildQuestions(allCards, limit) {
-  const selected = shuffle(allCards).slice(0, limit);
-  return selected.map((card) => {
-    const seen = new Set([norm(card.furigana)]);
-    const distractors = [];
-    for (const c of shuffle(allCards)) {
-      const k = norm(c.furigana);
-      if (c === card || seen.has(k)) continue;
-      seen.add(k);
-      distractors.push({ text: c.furigana, isCorrect: false });
-      if (distractors.length === 3) break;
-    }
-    const options = shuffle([
-      { text: card.furigana, isCorrect: true },
-      ...distractors,
-    ]);
-    return { kanji: card.kanji, arti: card.arti, options };
-  });
+// Satu soal pilihan ganda (opsi diacak Fisher-Yates)
+function makeQuestion(card, allCards) {
+  const seen = new Set([norm(card.furigana)]);
+  const distractors = [];
+  for (const c of shuffle(allCards)) {
+    const k = norm(c.furigana);
+    if (c === card || seen.has(k)) continue;
+    seen.add(k);
+    distractors.push({ text: c.furigana, isCorrect: false });
+    if (distractors.length === 3) break;
+  }
+  const options = shuffle([{ text: card.furigana, isCorrect: true }, ...distractors]);
+  return { kanji: card.kanji, arti: card.arti, options };
+}
+
+// Soal utama (urutan acak) + 3 soal cadangan untuk sudden death (diusahakan beda dari soal utama)
+function buildQuiz(allCards, limit) {
+  const deck = shuffle(allCards);
+  const main = deck.slice(0, limit);
+  const rest = deck.slice(limit);
+  const extra = (rest.length >= 3 ? rest : deck).slice(0, 3);
+  return {
+    questions: main.map((c) => makeQuestion(c, allCards)),
+    tiebreak: extra.map((c) => makeQuestion(c, allCards)),
+  };
 }
 
 // --- DAFTAR DECK UNTUK HOST ---
@@ -129,7 +137,8 @@ app.get(
       });
     }
 
-    res.json({ data: buildQuestions(allCards, limit) });
+    const quiz = buildQuiz(allCards, limit);
+    res.json({ data: quiz.questions, tiebreak: quiz.tiebreak });
   }),
 );
 
@@ -169,7 +178,8 @@ app.post(
       });
     }
 
-    res.json({ data: buildQuestions(cards, limit) });
+    const quiz = buildQuiz(cards, limit);
+    res.json({ data: quiz.questions, tiebreak: quiz.tiebreak });
   }),
 );
 

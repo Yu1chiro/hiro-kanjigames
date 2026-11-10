@@ -60,11 +60,48 @@
     .btn-white { background: #fff; color: #0F172A; }
     .btn-dark { background: #1E293B; color: #94A3B8; }
     .btn-white:active, .btn-dark:active { transform: scale(.97); }
+
+    /* TOAST JAWABAN */
+    .toast { position: fixed; z-index: 70; left: 50%; top: calc(76px + env(safe-area-inset-top)); transform: translateX(-50%); width: min(92vw, 380px); padding: 10px 14px; border-radius: 16px; background: rgba(15,23,42,.96); border: 2px solid #334155; box-shadow: 0 10px 30px rgba(0,0,0,.5); animation: toastIn .22s ease-out; text-align: left; }
+    .toast.hidden { display: none; }
+    .toast.ok { border-color: #10B981; } .toast.bad { border-color: #EF4444; } .toast.time { border-color: #F59E0B; }
+    .toast .t-title { font-size: 11px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+    .toast.ok .t-title { color: #34D399; } .toast.bad .t-title { color: #F87171; } .toast.time .t-title { color: #FBBF24; }
+    .toast .t-kanji { font-size: 26px; font-weight: 900; line-height: 1.15; }
+    .toast .t-read { font-size: 15px; font-weight: 700; color: #FDE68A; margin-left: 8px; }
+    .toast .t-mean { font-size: 13px; color: #CBD5E1; margin-top: 2px; }
+    .toast .t-pick { font-size: 11px; color: #94A3B8; margin-top: 3px; }
+    @keyframes toastIn { from { opacity: 0; transform: translate(-50%, -10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+    /* TOMBOL STATISTIK */
+    .btn-stats { position: absolute; top: 10px; right: 12px; z-index: 5; width: 40px; height: 40px; border-radius: 9999px; background: rgba(30,41,59,.9); border: 1px solid #334155; color: #FBBF24; font-size: 16px; }
+
+    /* MODAL STATISTIK */
+    .modal { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.75); display: flex; align-items: flex-end; justify-content: center; }
+    .modal.hidden { display: none; }
+    .sheet { width: 100%; max-width: 480px; max-height: 88dvh; background: #0F172A; border: 1px solid #334155; border-radius: 24px 24px 0 0; display: flex; flex-direction: column; padding: 14px 14px calc(14px + env(safe-area-inset-bottom)); }
+    .sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: 900; letter-spacing: .1em; }
+    .lb-row { display: flex; align-items: center; gap: 10px; background: #1E293B; border-radius: 14px; padding: 8px 10px; margin-bottom: 6px; }
+    .lb-row.me { border: 1px solid #FBBF24; }
+    .lb-rank { width: 22px; font-weight: 900; text-align: center; }
+    .lb-av { width: 34px; height: 34px; border-radius: 9999px; object-fit: cover; }
+    .lb-stat { font-size: 11px; font-weight: 700; display: flex; gap: 8px; margin-top: 2px; }
+    .tabs { display: flex; gap: 6px; margin: 8px 0; }
+    .tab { flex: 1; padding: 8px; border-radius: 12px; background: #1E293B; color: #94A3B8; font-weight: 800; font-size: 12px; }
+    .tab.active { background: #fff; color: #0F172A; }
+    .hist-scroll { overflow-y: auto; flex: 1 1 auto; min-height: 120px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+    .h-item { background: #1E293B; border-left: 4px solid #10B981; border-radius: 12px; padding: 8px 10px; margin-bottom: 6px; text-align: left; }
+    .h-item.bad { border-left-color: #EF4444; }
+    .h-kanji { font-size: 20px; font-weight: 900; }
+    .h-read { font-size: 13px; font-weight: 700; color: #FDE68A; margin-left: 6px; }
+    .h-mean { font-size: 12px; color: #CBD5E1; }
+    .h-pick { font-size: 11px; color: #F87171; margin-top: 2px; }
   </style>
 </head>
 <body>
 <div class="app">
 
+  <audio id="bgm" src="/backsound" loop preload="auto"></audio>
   <audio id="sfx-correct" src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_0625c1539c.mp3" preload="auto"></audio>
   <audio id="sfx-wrong" src="https://cdn.pixabay.com/download/audio/2022/03/10/audio_c8c8a73467.mp3" preload="auto"></audio>
 
@@ -91,7 +128,8 @@
 
   <!-- KANJI -->
   <main class="arena" id="arenaMain">
-    <div class="pill">Pilih Cara Baca</div>
+    <button id="btnStats" class="btn-stats" aria-label="Statistik"><i class="fa-solid fa-ranking-star"></i></button>
+    <div class="pill" id="pillText">Pilih Cara Baca</div>
     <div id="kanjiDisplay" class="kanji jp">&nbsp;</div>
     <div id="qCount" class="qcount"></div>
   </main>
@@ -116,9 +154,33 @@
   <div id="gameOverOverlay" class="overlay hidden">
     <div class="ov-inner">
       <h1 class="font-black uppercase tracking-widest mb-2" style="font-size: clamp(32px, 10vw, 48px)" id="winnerText">YOU WIN!</h1>
-      <p class="text-lg font-bold text-slate-400 mb-8" id="expResult">Total EXP: 0</p>
+      <p class="text-lg font-bold text-slate-400 mb-1" id="expResult">Total EXP: 0</p>
+      <p class="text-sm font-bold text-amber-300 mb-6" id="winReason"></p>
+      <button id="btnStatsOver" class="btn-big btn-dark mb-3" style="font-size: 16px"><i class="fa-solid fa-ranking-star mr-2"></i>RIWAYAT & STATISTIK</button>
       <button onclick="window.location.href='/'" class="btn-big btn-white mb-3">PLAY AGAIN</button>
       <button id="btnLobby" class="btn-big btn-dark" style="font-size: 16px">BACK TO LOBBY</button>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast hidden">
+    <div class="t-title" id="toastTitle"></div>
+    <div><span class="t-kanji jp" id="toastKanji"></span><span class="t-read jp" id="toastReading"></span></div>
+    <div class="t-mean" id="toastMean"></div>
+    <div class="t-pick jp" id="toastPicked"></div>
+  </div>
+
+  <!-- STATISTIK -->
+  <div id="statsModal" class="modal hidden">
+    <div class="sheet">
+      <div class="sheet-head"><span><i class="fa-solid fa-ranking-star text-yellow-400 mr-2"></i>STATISTIK</span>
+        <button id="btnCloseStats" class="text-2xl text-slate-400 px-2" aria-label="Tutup">&times;</button></div>
+      <div id="lbList"></div>
+      <div class="tabs">
+        <button class="tab active" data-who="me">Riwayat Saya</button>
+        <button class="tab" data-who="opp">Riwayat Lawan</button>
+      </div>
+      <div id="histList" class="hist-scroll"></div>
     </div>
   </div>
 </div>
@@ -126,7 +188,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-  import { getDatabase, ref, onValue, update, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+  import { getDatabase, ref, onValue, update, increment, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDAijNVFhFmTEMDqY-EKAtIXF6vXD1Hafg",
@@ -159,6 +221,84 @@
   let doneSent = false;
   let finishing = false;
 
+
+  // ===== Helpers =====
+  const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  // Fisher-Yates shuffle (dipakai juga di server saat generate soal)
+  function fisherYates(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+  const optsOf = (q) => (Array.isArray(q.options) ? q.options : Object.values(q.options || {}));
+  const correctText = (q) => (optsOf(q).find((o) => o.isCorrect) || {}).text || "";
+  const WRONG_DELAY = 1300, OK_DELAY = 700;
+  let lastData = null, statsWho = "me", shownTb = -1, tbQs = [], tbAdvanced = -1, tbFinished = false;
+
+  // ===== Toast jawaban benar =====
+  let toastTimer;
+  function showToast(q, type, picked) {
+    const t = $("toast");
+    t.className = `toast ${type}`;
+    $("toastTitle").textContent = type === "ok" ? "✓ Benar!" : type === "time" ? "⏱ Waktu habis — jawaban benar:" : "✗ Salah — jawaban benar:";
+    $("toastKanji").textContent = q.kanji;
+    $("toastReading").textContent = correctText(q);
+    $("toastMean").textContent = q.arti;
+    $("toastPicked").textContent = type === "bad" && picked ? `Jawabanmu: ${picked}` : "";
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.add("hidden"), type === "ok" ? 2200 : 3500);
+  }
+  $("toast").onclick = () => $("toast").classList.add("hidden");
+
+  // ===== Statistik / riwayat =====
+  const hist = (p) => Object.entries((p && p.history) || {}).map(([i, v]) => ({ i: Number(i), ...v })).sort((a, b) => a.i - b.i);
+  function renderStats() {
+    if (!lastData || !myRole) return;
+    const rows = ["host", "player"].map((role) => {
+      const p = lastData[role], h = hist(p);
+      return { role, p, ok: h.filter((x) => x.ok).length, bad: h.filter((x) => !x.ok).length };
+    }).sort((a, b) => (b.p.exp || 0) - (a.p.exp || 0) || b.ok - a.ok);
+    const medal = ["🥇", "🥈"];
+    $("lbList").innerHTML = rows.map((r, i) => `
+      <div class="lb-row ${r.role === myRole ? "me" : ""}">
+        <div class="lb-rank">${medal[i]}</div>
+        <img class="lb-av" src="${esc(r.p.photo || "")}" alt="">
+        <div class="min-w-0 flex-1">
+          <div class="font-bold text-sm truncate">${esc(r.p.name || "Player")}${r.role === myRole ? " (Kamu)" : ""}</div>
+          <div class="lb-stat"><span class="text-emerald-400">✓ ${r.ok}</span><span class="text-red-400">✗ ${r.bad}</span><span class="text-red-300">❤ ${Math.max(0, r.p.hp || 0)}</span></div>
+        </div>
+        <div class="font-black text-emerald-400">${r.p.exp || 0}<span class="text-[10px]"> EXP</span></div>
+      </div>`).join("");
+    document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.who === statsWho));
+    const role = statsWho === "me" ? myRole : oppRole;
+    const list = hist(lastData[role]).reverse();
+    $("histList").innerHTML = list.length ? list.map((h) => `
+      <div class="h-item ${h.ok ? "" : "bad"}">
+        <div><span class="text-xs text-slate-500 font-bold">#${h.i + 1}</span> <span class="h-kanji jp">${esc(h.kanji)}</span><span class="h-read jp">${esc(h.furigana)}</span></div>
+        <div class="h-mean">${esc(h.arti)}</div>
+        ${h.ok ? "" : `<div class="h-pick jp">${h.timeout ? "⏱ Waktu habis" : "Jawabanmu: " + esc(h.picked)}</div>`}
+      </div>`).join("") : `<div class="text-center text-slate-500 text-sm py-8">Belum ada riwayat jawaban.</div>`;
+  }
+  const openStats = () => { renderStats(); $("statsModal").classList.remove("hidden"); };
+  $("btnStats").onclick = openStats;
+  $("btnStatsOver").onclick = openStats;
+  $("btnCloseStats").onclick = () => $("statsModal").classList.add("hidden");
+  $("statsModal").onclick = (e) => { if (e.target.id === "statsModal") $("statsModal").classList.add("hidden"); };
+  document.querySelectorAll(".tab").forEach((t) => (t.onclick = () => { statsWho = t.dataset.who; renderStats(); }));
+
+
+  // ===== Background music (ganti BGM_SRC / atribut src pada <audio id="bgm">) =====
+  const bgm = $("bgm");
+  bgm.volume = 0.35;
+  let bgmWanted = false;
+  function startBgm() { bgmWanted = true; bgm.play().catch(() => {}); }
+  function stopBgm() { bgmWanted = false; bgm.pause(); try { bgm.currentTime = 0; } catch (e) {} }
+  // Jika autoplay diblok browser (mis. di sisi player), mulai di sentuhan berikutnya
+  window.addEventListener("pointerdown", () => { if (bgmWanted && bgm.paused) bgm.play().catch(() => {}); });
+
   const sfxCorrect = $("sfx-correct");
   const sfxWrong = $("sfx-wrong");
   const play = (el) => { try { el.currentTime = 0; el.play().catch(() => {}); } catch (e) {} };
@@ -180,6 +320,7 @@
   $("btnFight").onclick = async () => {
     if (myRole !== "host") return;
     $("btnFight").disabled = true;
+    startBgm();
     try {
       await update(ref(db, `rooms/${roomId}`), { fightStarted: true, fightAt: Date.now() });
     } catch (e) {
@@ -188,11 +329,92 @@
     }
   };
 
+  // Aturan: (1) yang masih hidup menang, (2) kalau dua-duanya hidup -> yang selesai soal duluan,
+  // (3) EXP, (4) HP, (5) seri -> sudden death
   function decideWinner(d) {
     const h = d.host, p = d.player;
-    if ((h.hp || 0) !== (p.hp || 0)) return (h.hp || 0) > (p.hp || 0) ? h.uid : p.uid;
-    if ((h.exp || 0) !== (p.exp || 0)) return (h.exp || 0) > (p.exp || 0) ? h.uid : p.uid;
-    return "draw";
+    const hAlive = (h.hp || 0) > 0, pAlive = (p.hp || 0) > 0;
+    if (hAlive !== pAlive) return { winner: hAlive ? h.uid : p.uid, reason: "dead" };
+    if (hAlive && pAlive) {
+      if (h.done && !p.done) return { winner: h.uid, reason: "speed" };
+      if (p.done && !h.done) return { winner: p.uid, reason: "speed" };
+      if (h.done && p.done && h.finishedAt && p.finishedAt && h.finishedAt !== p.finishedAt)
+        return { winner: h.finishedAt < p.finishedAt ? h.uid : p.uid, reason: "speed" };
+    }
+    if ((h.exp || 0) !== (p.exp || 0)) return { winner: (h.exp || 0) > (p.exp || 0) ? h.uid : p.uid, reason: "exp" };
+    if ((h.hp || 0) !== (p.hp || 0)) return { winner: (h.hp || 0) > (p.hp || 0) ? h.uid : p.uid, reason: "hp" };
+    return { winner: "draw", reason: "draw" };
+  }
+
+  // ===== SUDDEN DEATH =====
+  function startTiebreak(data) {
+    const tbq = data.tiebreakQuestions
+      ? Object.values(data.tiebreakQuestions)
+      : fisherYates(questions).slice(0, 3).map((q) => ({ kanji: q.kanji, arti: q.arti, options: fisherYates(optsOf(q)) }));
+    update(ref(db, `rooms/${roomId}`), { tiebreakQuestions: tbq, tiebreak: { round: 0 } });
+  }
+
+  function handleTiebreak(data) {
+    const tb = data.tiebreak;
+    tbQs = data.tiebreakQuestions ? Object.values(data.tiebreakQuestions) : [];
+    const r = tb.round || 0;
+    const q = tbQs[r];
+    if (!q) return;
+    const ans = (tb.answers && tb.answers[r]) || {};
+    if (myRole === "host") resolveTiebreak(data, r, ans);
+    if (shownTb !== r) {
+      shownTb = r;
+      isProcessing = !!ans[myRole];
+      renderQuestion(q, (i, ok) => selectTiebreak(i, ok, r));
+      $("pillText").textContent = "⚡ Sudden Death";
+      $("qCount").textContent = isProcessing ? "Menunggu lawan..." : "Jawab paling cepat & benar!";
+      if (isProcessing) document.querySelectorAll(".btn-option").forEach((b) => (b.disabled = true));
+      else resetTimer(() => tiebreakTimeout(r), 12);
+    }
+  }
+
+  function resolveTiebreak(data, r, ans) {
+    if (tbFinished) return;
+    const h = ans.host, p = ans.player;
+    let w = null;
+    if (h && h.correct && p && p.correct) w = (h.t || 0) <= (p.t || 0) ? data.host.uid : data.player.uid;
+    else if (h && h.correct) w = data.host.uid;
+    else if (p && p.correct) w = data.player.uid;
+    else if (h && p) {
+      if (r + 1 < tbQs.length) {
+        if (tbAdvanced !== r) { tbAdvanced = r; update(ref(db, `rooms/${roomId}/tiebreak`), { round: r + 1 }); }
+        return;
+      }
+      w = Math.random() < 0.5 ? data.host.uid : data.player.uid; // soal habis, undian
+    }
+    if (w) {
+      tbFinished = true;
+      update(ref(db, `rooms/${roomId}`), { status: "finished", winner: w, winReason: "tiebreak" });
+    }
+  }
+
+  function selectTiebreak(index, isCorrect, r) {
+    if (isProcessing) return;
+    isProcessing = true;
+    clearInterval(timerInterval);
+    const q = tbQs[r], o = optsOf(q);
+    const buttons = document.querySelectorAll(".btn-option");
+    buttons.forEach((b) => (b.disabled = true));
+    buttons[index].classList.add(isCorrect ? "btn-correct" : "btn-wrong");
+    if (!isCorrect) { const ci = o.findIndex((x) => x.isCorrect); if (buttons[ci]) buttons[ci].classList.add("btn-correct"); shake(); }
+    play(isCorrect ? sfxCorrect : sfxWrong);
+    showToast(q, isCorrect ? "ok" : "bad", o[index].text);
+    $("qCount").textContent = "Menunggu lawan...";
+    update(ref(db), { [`rooms/${roomId}/tiebreak/answers/${r}/${myRole}`]: { correct: isCorrect, t: serverTimestamp() } });
+  }
+
+  function tiebreakTimeout(r) {
+    if (isProcessing) return;
+    isProcessing = true;
+    document.querySelectorAll(".btn-option").forEach((b) => (b.disabled = true));
+    showToast(tbQs[r], "time");
+    play(sfxWrong);
+    update(ref(db), { [`rooms/${roomId}/tiebreak/answers/${r}/${myRole}`]: { correct: false, t: serverTimestamp() } });
   }
 
   onAuthStateChanged(auth, (user) => {
@@ -206,12 +428,14 @@
       myRole = data.host.uid === currentUser.uid ? "host" : "player";
       oppRole = myRole === "host" ? "player" : "host";
       questions = data.questions ? Object.values(data.questions) : [];
+      lastData = data;
+      if (!$("statsModal").classList.contains("hidden")) renderStats();
 
       renderPlayerUI("p1", data[myRole]);
       renderPlayerUI("p2", data[oppRole]);
 
       if (data.status === "finished") {
-        return showGameOver(data.winner, data[myRole].exp || 0);
+        return showGameOver(data.winner, data[myRole].exp || 0, data.winReason);
       }
 
       // Overlay start: host punya tombol, player menunggu
@@ -222,16 +446,22 @@
         return;
       }
       $("startOverlay").classList.add("hidden");
+      if (!bgmWanted && !gameOverShown) startBgm();
 
-      // Kondisi selesai (dicek host)
-      const bothDone = data.host.done && data.player.done;
+      // Sudden death aktif
+      if (data.tiebreak) return handleTiebreak(data);
+
+      // Selesai: ada yang HP habis ATAU ada yang lebih dulu menyelesaikan semua soal (dicek host)
+      const someoneDone = !!(data.host.done || data.player.done);
       const someoneDead = (data.host.hp || 0) <= 0 || (data.player.hp || 0) <= 0;
-      if ((someoneDead || bothDone) && myRole === "host" && !finishing) {
+      if ((someoneDead || someoneDone) && myRole === "host" && !finishing) {
         finishing = true;
-        update(ref(db, `rooms/${roomId}`), { status: "finished", winner: decideWinner(data) });
+        const res = decideWinner(data);
+        if (res.winner === "draw") startTiebreak(data);
+        else update(ref(db, `rooms/${roomId}`), { status: "finished", winner: res.winner, winReason: res.reason });
         return;
       }
-      if (someoneDead || bothDone) return;
+      if (someoneDead || someoneDone) return;
 
       // Soal independen per pemain
       const myIndex = data[myRole].qIndex || 0;
@@ -239,10 +469,10 @@
         clearInterval(timerInterval);
         $("kanjiDisplay").textContent = "✓";
         $("optionsGrid").innerHTML = "";
-        $("qCount").textContent = "Menunggu lawan selesai...";
+        $("qCount").textContent = "Selesai! Menentukan hasil...";
         if (!doneSent) {
           doneSent = true;
-          update(ref(db, `rooms/${roomId}/${myRole}`), { done: true });
+          update(ref(db, `rooms/${roomId}/${myRole}`), { done: true, finishedAt: serverTimestamp() });
         }
         return;
       }
@@ -264,33 +494,35 @@
     $(`${prefix}HpContainer`).innerHTML = hearts;
   }
 
-  function loadQuestion(index) {
-    isProcessing = false;
-    const q = questions[index];
+  function renderQuestion(q, onPick) {
     const kanjiEl = $("kanjiDisplay");
     kanjiEl.textContent = q.kanji;
-    // Kanji panjang diperkecil otomatis
     const len = [...String(q.kanji)].length;
     kanjiEl.style.fontSize = len <= 2 ? "" : len <= 4 ? "clamp(44px, 15vw, 76px)" : len <= 6 ? "clamp(34px, 11vw, 56px)" : "clamp(26px, 8vw, 40px)";
-    $("qCount").textContent = `Soal ${index + 1} / ${questions.length}`;
-
     const grid = $("optionsGrid");
     grid.innerHTML = "";
-    const opts = Array.isArray(q.options) ? q.options : Object.values(q.options);
-    opts.forEach((opt, i) => {
+    optsOf(q).forEach((opt, i) => {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "btn-option jp";
       b.textContent = opt.text;
-      b.onclick = () => selectAnswer(i, !!opt.isCorrect);
+      b.onclick = () => onPick(i, !!opt.isCorrect);
       grid.appendChild(b);
     });
+  }
+
+  function loadQuestion(index) {
+    isProcessing = false;
+    const q = questions[index];
+    renderQuestion(q, selectAnswer);
+    $("pillText").textContent = "Pilih Cara Baca";
+    $("qCount").textContent = `Soal ${index + 1} / ${questions.length}`;
     resetTimer();
   }
 
-  function resetTimer() {
+  function resetTimer(cb = handleTimeOut, secs = 15) {
     clearInterval(timerInterval);
-    timeLeft = 15;
+    timeLeft = secs;
     const bar = $("timerBar");
     bar.style.transition = "none";
     bar.style.width = "100%";
@@ -298,10 +530,10 @@
     bar.style.transition = "width 1s linear";
     timerInterval = setInterval(() => {
       timeLeft--;
-      bar.style.width = `${(timeLeft / 15) * 100}%`;
+      bar.style.width = `${(timeLeft / secs) * 100}%`;
       if (timeLeft <= 0) {
         clearInterval(timerInterval);
-        handleTimeOut();
+        cb();
       }
     }, 1000);
   }
@@ -315,10 +547,21 @@
   function handleTimeOut() {
     if (isProcessing) return;
     isProcessing = true;
+    const idx = shownIndex, q = questions[idx];
     play(sfxWrong);
     shake();
-    document.querySelectorAll(".btn-option").forEach((b) => (b.disabled = true));
-    update(ref(db, `rooms/${roomId}/${myRole}`), { hp: increment(-1), qIndex: increment(1) });
+    const buttons = document.querySelectorAll(".btn-option");
+    buttons.forEach((b) => (b.disabled = true));
+    const ci = optsOf(q).findIndex((o) => o.isCorrect);
+    if (buttons[ci]) buttons[ci].classList.add("btn-correct");
+    showToast(q, "time");
+    const base = `rooms/${roomId}/${myRole}`;
+    const updates = {
+      [`${base}/hp`]: increment(-1),
+      [`${base}/qIndex`]: increment(1),
+      [`${base}/history/${idx}`]: { kanji: q.kanji, furigana: correctText(q), arti: q.arti, picked: null, ok: false, timeout: true },
+    };
+    setTimeout(() => update(ref(db), updates), WRONG_DELAY);
   }
 
   function selectAnswer(index, isCorrect) {
@@ -326,40 +569,51 @@
     isProcessing = true;
     clearInterval(timerInterval);
 
+    const idx = shownIndex, q = questions[idx], o = optsOf(q);
     const buttons = document.querySelectorAll(".btn-option");
     buttons.forEach((b) => (b.disabled = true));
-    const selectedBtn = buttons[index];
     const base = `rooms/${roomId}/${myRole}`;
     const updates = {};
     updates[`${base}/qIndex`] = increment(1);
+    updates[`${base}/history/${idx}`] = { kanji: q.kanji, furigana: correctText(q), arti: q.arti, picked: o[index].text, ok: isCorrect, timeout: false };
 
     if (isCorrect) {
       play(sfxCorrect);
-      selectedBtn.classList.add("btn-correct");
+      buttons[index].classList.add("btn-correct");
       updates[`${base}/exp`] = increment(20);
     } else {
       play(sfxWrong);
-      selectedBtn.classList.add("btn-wrong");
+      buttons[index].classList.add("btn-wrong");
       updates[`${base}/hp`] = increment(-1);
       updates[`${base}/exp`] = increment(-5);
       shake();
-      // Tunjukkan jawaban benar
-      const q = questions[shownIndex];
-      const opts = Array.isArray(q.options) ? q.options : Object.values(q.options);
-      const ci = opts.findIndex((o) => o.isCorrect);
-      if (ci >= 0 && buttons[ci]) buttons[ci].classList.add("btn-correct");
+      const ci = o.findIndex((x) => x.isCorrect);
+      if (buttons[ci]) buttons[ci].classList.add("btn-correct");
     }
-
-    setTimeout(() => update(ref(db), updates), 700);
+    // Toast SELALU tampil (benar maupun salah): kanji, furigana, arti
+    showToast(q, isCorrect ? "ok" : "bad", o[index].text);
+    setTimeout(() => update(ref(db), updates), isCorrect ? OK_DELAY : WRONG_DELAY);
   }
 
-  function showGameOver(winnerUid, myExp) {
+  function showGameOver(winnerUid, myExp, reason) {
     if (gameOverShown) return;
     gameOverShown = true;
+    stopBgm();
     clearInterval(timerInterval);
     $("startOverlay").classList.add("hidden");
     $("gameOverOverlay").classList.remove("hidden");
     $("expResult").textContent = `Total EXP: ${myExp}`;
+    clearTimeout(toastTimer);
+    $("toast").classList.add("hidden");
+    const iWon = winnerUid === currentUser.uid;
+    const REASONS = {
+      speed:    ["⚡ Fast answer", "⚡ Slow answer"],
+      dead:     ["💥 Win", "💔 Lose"],
+      exp:      ["⭐ Win EXP", "⭐ Lose EXP"],
+      hp:       ["❤️ Win HP", "❤️ Lose HP"],
+      tiebreak: ["⚔️ Sudden Death Win", "⚔️ Sudden Death Lose"],
+    };
+    $("winReason").textContent = winnerUid === "draw" ? "" : ((REASONS[reason] || [])[iWon ? 0 : 1] || "");
     const title = $("winnerText");
     if (winnerUid === "draw") {
       title.textContent = "DRAW 🤝";
@@ -368,7 +622,7 @@
       title.textContent = "YOU WIN! 🏆";
       title.classList.add("text-yellow-400");
     } else {
-      title.textContent = "YOU LOSE! 💀";
+      title.textContent = "YOU LOSE!";
       title.classList.add("text-red-500");
     }
   }
