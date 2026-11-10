@@ -96,6 +96,10 @@
     .h-read { font-size: 13px; font-weight: 700; color: #FDE68A; margin-left: 6px; }
     .h-mean { font-size: 12px; color: #CBD5E1; }
     .h-pick { font-size: 11px; color: #F87171; margin-top: 2px; }
+      .strip{display:flex;gap:6px;overflow-x:auto;padding:6px 10px;background:#0B1220;border-bottom:1px solid #1E293B;flex-shrink:0}
+    .chip2{display:flex;align-items:center;gap:5px;background:#1E293B;border-radius:9999px;padding:3px 9px 3px 3px;font-size:11px;font-weight:800;white-space:nowrap;border:1px solid transparent}
+    .chip2.me{border-color:#FBBF24}.chip2.dead{opacity:.45}
+    .chip2 img{width:22px;height:22px;border-radius:9999px;object-fit:cover}
   </style>
 </head>
 <body>
@@ -107,24 +111,17 @@
 
   <!-- TOP BAR -->
   <header class="topbar">
-    <div class="pbox">
+    <div class="pbox" style="width:auto">
       <img id="p1Avatar" src="" alt="" class="pavatar">
       <div class="min-w-0">
-        <div class="pname" id="p1Name">Player 1</div>
+        <div class="pname" id="p1Name">Player</div>
         <div id="p1HpContainer" style="white-space: nowrap"></div>
         <div class="pexp" id="p1Exp">0 EXP</div>
       </div>
     </div>
-    <div class="vs">VS</div>
-    <div class="pbox right">
-      <img id="p2Avatar" src="" alt="" class="pavatar">
-      <div class="min-w-0">
-        <div class="pname" id="p2Name">Player 2</div>
-        <div id="p2HpContainer" style="white-space: nowrap"></div>
-        <div class="pexp" id="p2Exp">0 EXP</div>
-      </div>
-    </div>
+    <div class="vs" id="rankBadge">#1</div>
   </header>
+  <div id="strip" class="strip"></div>
 
   <!-- KANJI -->
   <main class="arena" id="arenaMain">
@@ -132,6 +129,7 @@
     <div class="pill" id="pillText">Pilih Cara Baca</div>
     <div id="kanjiDisplay" class="kanji jp">&nbsp;</div>
     <div id="qCount" class="qcount"></div>
+    <button id="btnEnd" class="hidden relative mt-3 px-4 py-2 rounded-xl bg-slate-800 text-amber-300 text-xs font-black uppercase tracking-wider">Akhiri Game Sekarang</button>
   </main>
 
   <div class="timer-wrap"><div id="timerBar" class="timer-bar"></div></div>
@@ -156,6 +154,7 @@
       <h1 class="font-black uppercase tracking-widest mb-2" style="font-size: clamp(32px, 10vw, 48px)" id="winnerText">YOU WIN!</h1>
       <p class="text-lg font-bold text-slate-400 mb-1" id="expResult">Total EXP: 0</p>
       <p class="text-sm font-bold text-amber-300 mb-6" id="winReason"></p>
+      <div id="finalBoard" class="text-left mb-3" style="max-height:34vh;overflow-y:auto"></div>
       <button id="btnStatsOver" class="btn-big btn-dark mb-3" style="font-size: 16px"><i class="fa-solid fa-ranking-star mr-2"></i>RIWAYAT & STATISTIK</button>
       <button onclick="window.location.href='/'" class="btn-big btn-white mb-3">PLAY AGAIN</button>
       <button id="btnLobby" class="btn-big btn-dark" style="font-size: 16px">BACK TO LOBBY</button>
@@ -176,10 +175,7 @@
       <div class="sheet-head"><span><i class="fa-solid fa-ranking-star text-yellow-400 mr-2"></i>STATISTIK</span>
         <button id="btnCloseStats" class="text-2xl text-slate-400 px-2" aria-label="Tutup">&times;</button></div>
       <div id="lbList"></div>
-      <div class="tabs">
-        <button class="tab active" data-who="me">Riwayat Saya</button>
-        <button class="tab" data-who="opp">Riwayat Lawan</button>
-      </div>
+      <div class="tabs"><button class="tab active" data-who="me">Riwayat Saya</button></div>
       <div id="histList" class="hist-scroll"></div>
     </div>
   </div>
@@ -209,36 +205,20 @@
   const roomId = new URLSearchParams(window.location.search).get("id");
   if (!roomId) window.location.href = "/";
 
-  let currentUser = null;
-  let myRole = null;
-  let oppRole = null;
-  let questions = [];
-  let shownIndex = -1;
-  let timerInterval;
-  let timeLeft = 15;
-  let isProcessing = false;
-  let gameOverShown = false;
-  let doneSent = false;
-  let finishing = false;
-
+  let currentUser = null, isHost = false, questions = [], shownIndex = -1;
+  let timerInterval, timeLeft = 15, isProcessing = false, gameOverShown = false, doneSent = false, finishing = false, lastData = null;
 
   // ===== Helpers =====
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  // Fisher-Yates shuffle (dipakai juga di server saat generate soal)
-  function fisherYates(arr) {
-    const a = [...arr];
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  }
   const optsOf = (q) => (Array.isArray(q.options) ? q.options : Object.values(q.options || {}));
   const correctText = (q) => (optsOf(q).find((o) => o.isCorrect) || {}).text || "";
-  const WRONG_DELAY = 1300, OK_DELAY = 700;
-  let lastData = null, statsWho = "me", shownTb = -1, tbQs = [], tbAdvanced = -1, tbFinished = false;
+  const WRONG_DELAY = 1300, OK_DELAY = 700, MEDAL = ["🥇", "🥈", "🥉"];
+  const plist = (d) => Object.entries(d.players || {}).map(([uid, p]) => ({ uid, ...p }));
+  // Ranking: EXP tertinggi -> HP terbanyak -> selesai paling cepat
+  const ranked = (d) => plist(d).sort((a, b) => (b.exp || 0) - (a.exp || 0) || (b.hp || 0) - (a.hp || 0) || (a.finishedAt || 9e15) - (b.finishedAt || 9e15));
+  const hist = (p) => Object.entries((p && p.history) || {}).map(([i, v]) => ({ i: Number(i), ...v })).sort((a, b) => a.i - b.i);
 
-  // ===== Toast jawaban benar =====
+  // ===== Toast =====
   let toastTimer;
   function showToast(q, type, picked) {
     const t = $("toast");
@@ -253,29 +233,27 @@
   }
   $("toast").onclick = () => $("toast").classList.add("hidden");
 
-  // ===== Statistik / riwayat =====
-  const hist = (p) => Object.entries((p && p.history) || {}).map(([i, v]) => ({ i: Number(i), ...v })).sort((a, b) => a.i - b.i);
-  function renderStats() {
-    if (!lastData || !myRole) return;
-    const rows = ["host", "player"].map((role) => {
-      const p = lastData[role], h = hist(p);
-      return { role, p, ok: h.filter((x) => x.ok).length, bad: h.filter((x) => !x.ok).length };
-    }).sort((a, b) => (b.p.exp || 0) - (a.p.exp || 0) || b.ok - a.ok);
-    const medal = ["🥇", "🥈"];
-    $("lbList").innerHTML = rows.map((r, i) => `
-      <div class="lb-row ${r.role === myRole ? "me" : ""}">
-        <div class="lb-rank">${medal[i]}</div>
-        <img class="lb-av" src="${esc(r.p.photo || "")}" alt="">
+  // ===== Leaderboard & statistik =====
+  function boardHTML(list) {
+    return list.map((p, i) => {
+      const h = hist(p), ok = h.filter((x) => x.ok).length, bad = h.length - ok;
+      return `<div class="lb-row ${p.uid === currentUser.uid ? "me" : ""}">
+        <div class="lb-rank">${MEDAL[i] || i + 1}</div>
+        <img class="lb-av" src="${esc(p.photo || "")}" alt="">
         <div class="min-w-0 flex-1">
-          <div class="font-bold text-sm truncate">${esc(r.p.name || "Player")}${r.role === myRole ? " (Kamu)" : ""}</div>
-          <div class="lb-stat"><span class="text-emerald-400">✓ ${r.ok}</span><span class="text-red-400">✗ ${r.bad}</span><span class="text-red-300">❤ ${Math.max(0, r.p.hp || 0)}</span></div>
+          <div class="font-bold text-sm truncate">${esc(p.name || "Player")}${p.uid === currentUser.uid ? " (Kamu)" : ""}</div>
+          <div class="lb-stat"><span class="text-emerald-400">✓ ${ok}</span><span class="text-red-400">✗ ${bad}</span><span class="text-red-300">❤ ${Math.max(0, p.hp || 0)}</span></div>
         </div>
-        <div class="font-black text-emerald-400">${r.p.exp || 0}<span class="text-[10px]"> EXP</span></div>
-      </div>`).join("");
-    document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.who === statsWho));
-    const role = statsWho === "me" ? myRole : oppRole;
-    const list = hist(lastData[role]).reverse();
-    $("histList").innerHTML = list.length ? list.map((h) => `
+        <div class="font-black text-emerald-400">${p.exp || 0}<span class="text-[10px]"> EXP</span></div>
+      </div>`;
+    }).join("");
+  }
+  function renderStats() {
+    if (!lastData) return;
+    const list = ranked(lastData);
+    $("lbList").innerHTML = boardHTML(list);
+    const mine = hist(lastData.players[currentUser.uid]).reverse();
+    $("histList").innerHTML = mine.length ? mine.map((h) => `
       <div class="h-item ${h.ok ? "" : "bad"}">
         <div><span class="text-xs text-slate-500 font-bold">#${h.i + 1}</span> <span class="h-kanji jp">${esc(h.kanji)}</span><span class="h-read jp">${esc(h.furigana)}</span></div>
         <div class="h-mean">${esc(h.arti)}</div>
@@ -287,23 +265,32 @@
   $("btnStatsOver").onclick = openStats;
   $("btnCloseStats").onclick = () => $("statsModal").classList.add("hidden");
   $("statsModal").onclick = (e) => { if (e.target.id === "statsModal") $("statsModal").classList.add("hidden"); };
-  document.querySelectorAll(".tab").forEach((t) => (t.onclick = () => { statsWho = t.dataset.who; renderStats(); }));
 
+  function renderStrip(list) {
+    $("strip").innerHTML = list.map((p, i) => `
+      <div class="chip2 ${p.uid === currentUser.uid ? "me" : ""} ${(p.hp || 0) <= 0 ? "dead" : ""}">
+        <img src="${esc(p.photo || "")}" alt=""><span>${MEDAL[i] || i + 1}</span><span class="text-emerald-400">${p.exp || 0}</span>${p.done ? "<span>✓</span>" : ""}
+      </div>`).join("");
+  }
+  function renderMe(p, rank, total) {
+    $("p1Name").textContent = p.name || "Player";
+    if ($("p1Avatar").getAttribute("src") !== (p.photo || "")) $("p1Avatar").src = p.photo || "";
+    $("p1Exp").textContent = `${p.exp || 0} EXP`;
+    let hearts = "";
+    for (let i = 0; i < 5; i++) hearts += `<i class="fa-solid fa-heart hp-heart ${i >= (p.hp || 0) ? "lost" : ""}"></i>`;
+    $("p1HpContainer").innerHTML = hearts;
+    $("rankBadge").textContent = `#${rank}/${total}`;
+  }
 
-  // ===== Background music (ganti BGM_SRC / atribut src pada <audio id="bgm">) =====
+  // ===== Audio =====
   const bgm = $("bgm");
   bgm.volume = 0.35;
   let bgmWanted = false;
   function startBgm() { bgmWanted = true; bgm.play().catch(() => {}); }
   function stopBgm() { bgmWanted = false; bgm.pause(); try { bgm.currentTime = 0; } catch (e) {} }
-  // Jika autoplay diblok browser (mis. di sisi player), mulai di sentuhan berikutnya
   window.addEventListener("pointerdown", () => { if (bgmWanted && bgm.paused) bgm.play().catch(() => {}); });
-
-  const sfxCorrect = $("sfx-correct");
-  const sfxWrong = $("sfx-wrong");
+  const sfxCorrect = $("sfx-correct"), sfxWrong = $("sfx-wrong");
   const play = (el) => { try { el.currentTime = 0; el.play().catch(() => {}); } catch (e) {} };
-
-  // Unlock audio di sentuhan pertama (iOS / Android)
   function unlockAudio() {
     [sfxCorrect, sfxWrong].forEach((a) => {
       a.muted = true;
@@ -313,108 +300,23 @@
   }
   window.addEventListener("pointerdown", unlockAudio, { once: true });
 
-  // BACK TO LOBBY -> kembali ke room yang sama (bukan logout / halaman awal)
   $("btnLobby").onclick = () => { window.location.href = `/room?id=${roomId}`; };
 
-  // HANYA HOST yang bisa memulai fight
+  // Hanya host yang memulai
   $("btnFight").onclick = async () => {
-    if (myRole !== "host") return;
+    if (!isHost) return;
     $("btnFight").disabled = true;
     startBgm();
-    try {
-      await update(ref(db, `rooms/${roomId}`), { fightStarted: true, fightAt: Date.now() });
-    } catch (e) {
-      console.error(e);
-      $("btnFight").disabled = false;
-    }
+    try { await update(ref(db, `rooms/${roomId}`), { fightStarted: true, fightAt: Date.now() }); }
+    catch (e) { console.error(e); $("btnFight").disabled = false; }
   };
 
-  // Aturan: (1) yang masih hidup menang, (2) kalau dua-duanya hidup -> yang selesai soal duluan,
-  // (3) EXP, (4) HP, (5) seri -> sudden death
-  function decideWinner(d) {
-    const h = d.host, p = d.player;
-    const hAlive = (h.hp || 0) > 0, pAlive = (p.hp || 0) > 0;
-    if (hAlive !== pAlive) return { winner: hAlive ? h.uid : p.uid, reason: "dead" };
-    if (hAlive && pAlive) {
-      if (h.done && !p.done) return { winner: h.uid, reason: "speed" };
-      if (p.done && !h.done) return { winner: p.uid, reason: "speed" };
-      if (h.done && p.done && h.finishedAt && p.finishedAt && h.finishedAt !== p.finishedAt)
-        return { winner: h.finishedAt < p.finishedAt ? h.uid : p.uid, reason: "speed" };
-    }
-    if ((h.exp || 0) !== (p.exp || 0)) return { winner: (h.exp || 0) > (p.exp || 0) ? h.uid : p.uid, reason: "exp" };
-    if ((h.hp || 0) !== (p.hp || 0)) return { winner: (h.hp || 0) > (p.hp || 0) ? h.uid : p.uid, reason: "hp" };
-    return { winner: "draw", reason: "draw" };
-  }
-
-  // ===== SUDDEN DEATH =====
-  function startTiebreak(data) {
-    const tbq = data.tiebreakQuestions
-      ? Object.values(data.tiebreakQuestions)
-      : fisherYates(questions).slice(0, 3).map((q) => ({ kanji: q.kanji, arti: q.arti, options: fisherYates(optsOf(q)) }));
-    update(ref(db, `rooms/${roomId}`), { tiebreakQuestions: tbq, tiebreak: { round: 0 } });
-  }
-
-  function handleTiebreak(data) {
-    const tb = data.tiebreak;
-    tbQs = data.tiebreakQuestions ? Object.values(data.tiebreakQuestions) : [];
-    const r = tb.round || 0;
-    const q = tbQs[r];
-    if (!q) return;
-    const ans = (tb.answers && tb.answers[r]) || {};
-    if (myRole === "host") resolveTiebreak(data, r, ans);
-    if (shownTb !== r) {
-      shownTb = r;
-      isProcessing = !!ans[myRole];
-      renderQuestion(q, (i, ok) => selectTiebreak(i, ok, r));
-      $("pillText").textContent = "⚡ Sudden Death";
-      $("qCount").textContent = isProcessing ? "Menunggu lawan..." : "Jawab paling cepat & benar!";
-      if (isProcessing) document.querySelectorAll(".btn-option").forEach((b) => (b.disabled = true));
-      else resetTimer(() => tiebreakTimeout(r), 12);
-    }
-  }
-
-  function resolveTiebreak(data, r, ans) {
-    if (tbFinished) return;
-    const h = ans.host, p = ans.player;
-    let w = null;
-    if (h && h.correct && p && p.correct) w = (h.t || 0) <= (p.t || 0) ? data.host.uid : data.player.uid;
-    else if (h && h.correct) w = data.host.uid;
-    else if (p && p.correct) w = data.player.uid;
-    else if (h && p) {
-      if (r + 1 < tbQs.length) {
-        if (tbAdvanced !== r) { tbAdvanced = r; update(ref(db, `rooms/${roomId}/tiebreak`), { round: r + 1 }); }
-        return;
-      }
-      w = Math.random() < 0.5 ? data.host.uid : data.player.uid; // soal habis, undian
-    }
-    if (w) {
-      tbFinished = true;
-      update(ref(db, `rooms/${roomId}`), { status: "finished", winner: w, winReason: "tiebreak" });
-    }
-  }
-
-  function selectTiebreak(index, isCorrect, r) {
-    if (isProcessing) return;
-    isProcessing = true;
-    clearInterval(timerInterval);
-    const q = tbQs[r], o = optsOf(q);
-    const buttons = document.querySelectorAll(".btn-option");
-    buttons.forEach((b) => (b.disabled = true));
-    buttons[index].classList.add(isCorrect ? "btn-correct" : "btn-wrong");
-    if (!isCorrect) { const ci = o.findIndex((x) => x.isCorrect); if (buttons[ci]) buttons[ci].classList.add("btn-correct"); shake(); }
-    play(isCorrect ? sfxCorrect : sfxWrong);
-    showToast(q, isCorrect ? "ok" : "bad", o[index].text);
-    $("qCount").textContent = "Menunggu lawan...";
-    update(ref(db), { [`rooms/${roomId}/tiebreak/answers/${r}/${myRole}`]: { correct: isCorrect, t: serverTimestamp() } });
-  }
-
-  function tiebreakTimeout(r) {
-    if (isProcessing) return;
-    isProcessing = true;
-    document.querySelectorAll(".btn-option").forEach((b) => (b.disabled = true));
-    showToast(tbQs[r], "time");
-    play(sfxWrong);
-    update(ref(db), { [`rooms/${roomId}/tiebreak/answers/${r}/${myRole}`]: { correct: false, t: serverTimestamp() } });
+  // Host bisa mengakhiri paksa (mis. ada pemain yang keluar/disconnect)
+  $("btnEnd").onclick = () => finishGame(lastData);
+  function finishGame(d) {
+    if (!d || !isHost) return;
+    const list = ranked(d);
+    update(ref(db, `rooms/${roomId}`), { status: "finished", winner: list[0].uid, winReason: "rank" });
   }
 
   onAuthStateChanged(auth, (user) => {
@@ -423,76 +325,54 @@
 
     onValue(ref(db, `rooms/${roomId}`), (snapshot) => {
       const data = snapshot.val();
-      if (!data || !data.host || !data.player) return;
+      if (!data || !data.players) return;
+      const me = data.players[currentUser.uid];
+      if (!me) { window.location.href = "/"; return; }
 
-      myRole = data.host.uid === currentUser.uid ? "host" : "player";
-      oppRole = myRole === "host" ? "player" : "host";
+      isHost = data.host.uid === currentUser.uid;
       questions = data.questions ? Object.values(data.questions) : [];
       lastData = data;
+
+      const list = ranked(data);
+      renderMe(me, list.findIndex((p) => p.uid === currentUser.uid) + 1, list.length);
+      renderStrip(list);
       if (!$("statsModal").classList.contains("hidden")) renderStats();
 
-      renderPlayerUI("p1", data[myRole]);
-      renderPlayerUI("p2", data[oppRole]);
+      if (data.status === "finished") return showGameOver(list, me);
 
-      if (data.status === "finished") {
-        return showGameOver(data.winner, data[myRole].exp || 0, data.winReason);
-      }
-
-      // Overlay start: host punya tombol, player menunggu
       if (!data.fightStarted) {
         $("startOverlay").classList.remove("hidden");
-        $("btnFight").classList.toggle("hidden", myRole !== "host");
-        $("waitHost").classList.toggle("hidden", myRole === "host");
+        $("btnFight").classList.toggle("hidden", !isHost);
+        $("waitHost").classList.toggle("hidden", isHost);
         return;
       }
       $("startOverlay").classList.add("hidden");
       if (!bgmWanted && !gameOverShown) startBgm();
 
-      // Sudden death aktif
-      if (data.tiebreak) return handleTiebreak(data);
-
-      // Selesai: ada yang HP habis ATAU ada yang lebih dulu menyelesaikan semua soal (dicek host)
-      const someoneDone = !!(data.host.done || data.player.done);
-      const someoneDead = (data.host.hp || 0) <= 0 || (data.player.hp || 0) <= 0;
-      if ((someoneDead || someoneDone) && myRole === "host" && !finishing) {
+      // Host menutup game saat semua pemain selesai / HP habis
+      if (isHost && !finishing && list.length && list.every((p) => p.done)) {
         finishing = true;
-        const res = decideWinner(data);
-        if (res.winner === "draw") startTiebreak(data);
-        else update(ref(db, `rooms/${roomId}`), { status: "finished", winner: res.winner, winReason: res.reason });
-        return;
+        return finishGame(data);
       }
-      if (someoneDead || someoneDone) return;
 
-      // Soal independen per pemain
-      const myIndex = data[myRole].qIndex || 0;
-      if (myIndex >= questions.length) {
+      const myIndex = me.qIndex || 0;
+      if (me.done || (me.hp || 0) <= 0 || myIndex >= questions.length) {
         clearInterval(timerInterval);
-        $("kanjiDisplay").textContent = "✓";
+        $("kanjiDisplay").textContent = (me.hp || 0) <= 0 ? "💀" : "✓";
         $("optionsGrid").innerHTML = "";
-        $("qCount").textContent = "Selesai! Menentukan hasil...";
-        if (!doneSent) {
+        $("pillText").textContent = "Selesai";
+        const doneCount = list.filter((p) => p.done).length;
+        $("qCount").textContent = `Menunggu pemain lain (${doneCount}/${list.length})`;
+        $("btnEnd").classList.toggle("hidden", !isHost);
+        if (!doneSent && !me.done) {
           doneSent = true;
-          update(ref(db, `rooms/${roomId}/${myRole}`), { done: true, finishedAt: serverTimestamp() });
+          update(ref(db, `rooms/${roomId}/players/${currentUser.uid}`), { done: true, finishedAt: serverTimestamp() });
         }
         return;
       }
-      if (myIndex !== shownIndex) {
-        shownIndex = myIndex;
-        loadQuestion(myIndex);
-      }
+      if (myIndex !== shownIndex) { shownIndex = myIndex; loadQuestion(myIndex); }
     });
   });
-
-  function renderPlayerUI(prefix, p) {
-    $(`${prefix}Name`).textContent = p.name || "Player";
-    if ($(`${prefix}Avatar`).getAttribute("src") !== (p.photo || "")) $(`${prefix}Avatar`).src = p.photo || "";
-    $(`${prefix}Exp`).textContent = `${p.exp || 0} EXP`;
-    let hearts = "";
-    for (let i = 0; i < 5; i++) {
-      hearts += `<i class="fa-solid fa-heart hp-heart ${i >= (p.hp || 0) ? "lost" : ""}"></i>`;
-    }
-    $(`${prefix}HpContainer`).innerHTML = hearts;
-  }
 
   function renderQuestion(q, onPick) {
     const kanjiEl = $("kanjiDisplay");
@@ -513,8 +393,7 @@
 
   function loadQuestion(index) {
     isProcessing = false;
-    const q = questions[index];
-    renderQuestion(q, selectAnswer);
+    renderQuestion(questions[index], selectAnswer);
     $("pillText").textContent = "Pilih Cara Baca";
     $("qCount").textContent = `Soal ${index + 1} / ${questions.length}`;
     resetTimer();
@@ -531,10 +410,7 @@
     timerInterval = setInterval(() => {
       timeLeft--;
       bar.style.width = `${(timeLeft / secs) * 100}%`;
-      if (timeLeft <= 0) {
-        clearInterval(timerInterval);
-        cb();
-      }
+      if (timeLeft <= 0) { clearInterval(timerInterval); cb(); }
     }, 1000);
   }
 
@@ -548,14 +424,13 @@
     if (isProcessing) return;
     isProcessing = true;
     const idx = shownIndex, q = questions[idx];
-    play(sfxWrong);
-    shake();
+    play(sfxWrong); shake();
     const buttons = document.querySelectorAll(".btn-option");
     buttons.forEach((b) => (b.disabled = true));
     const ci = optsOf(q).findIndex((o) => o.isCorrect);
     if (buttons[ci]) buttons[ci].classList.add("btn-correct");
     showToast(q, "time");
-    const base = `rooms/${roomId}/${myRole}`;
+    const base = `rooms/${roomId}/players/${currentUser.uid}`;
     const updates = {
       [`${base}/hp`]: increment(-1),
       [`${base}/qIndex`]: increment(1),
@@ -568,19 +443,17 @@
     if (isProcessing) return;
     isProcessing = true;
     clearInterval(timerInterval);
-
     const idx = shownIndex, q = questions[idx], o = optsOf(q);
     const buttons = document.querySelectorAll(".btn-option");
     buttons.forEach((b) => (b.disabled = true));
-    const base = `rooms/${roomId}/${myRole}`;
+    const base = `rooms/${roomId}/players/${currentUser.uid}`;
     const updates = {};
     updates[`${base}/qIndex`] = increment(1);
     updates[`${base}/history/${idx}`] = { kanji: q.kanji, furigana: correctText(q), arti: q.arti, picked: o[index].text, ok: isCorrect, timeout: false };
-
     if (isCorrect) {
       play(sfxCorrect);
       buttons[index].classList.add("btn-correct");
-      updates[`${base}/exp`] = increment(20);
+      updates[`${base}/exp`] = increment(20 + Math.max(0, timeLeft)); // bonus kecepatan ala Quizizz
     } else {
       play(sfxWrong);
       buttons[index].classList.add("btn-wrong");
@@ -590,41 +463,26 @@
       const ci = o.findIndex((x) => x.isCorrect);
       if (buttons[ci]) buttons[ci].classList.add("btn-correct");
     }
-    // Toast SELALU tampil (benar maupun salah): kanji, furigana, arti
     showToast(q, isCorrect ? "ok" : "bad", o[index].text);
     setTimeout(() => update(ref(db), updates), isCorrect ? OK_DELAY : WRONG_DELAY);
   }
 
-  function showGameOver(winnerUid, myExp, reason) {
+  function showGameOver(list, me) {
     if (gameOverShown) return;
     gameOverShown = true;
     stopBgm();
     clearInterval(timerInterval);
     $("startOverlay").classList.add("hidden");
     $("gameOverOverlay").classList.remove("hidden");
-    $("expResult").textContent = `Total EXP: ${myExp}`;
     clearTimeout(toastTimer);
     $("toast").classList.add("hidden");
-    const iWon = winnerUid === currentUser.uid;
-    const REASONS = {
-      speed:    ["⚡ Fast answer", "⚡ Slow answer"],
-      dead:     ["💥 Win", "💔 Lose"],
-      exp:      ["⭐ Win EXP", "⭐ Lose EXP"],
-      hp:       ["❤️ Win HP", "❤️ Lose HP"],
-      tiebreak: ["⚔️ Sudden Death Win", "⚔️ Sudden Death Lose"],
-    };
-    $("winReason").textContent = winnerUid === "draw" ? "" : ((REASONS[reason] || [])[iWon ? 0 : 1] || "");
+    const rank = list.findIndex((p) => p.uid === currentUser.uid) + 1;
+    $("expResult").textContent = `Total EXP: ${me.exp || 0}`;
+    $("winReason").textContent = `Peringkat ${rank} dari ${list.length} pemain`;
+    $("finalBoard").innerHTML = boardHTML(list);
     const title = $("winnerText");
-    if (winnerUid === "draw") {
-      title.textContent = "DRAW 🤝";
-      title.classList.add("text-slate-200");
-    } else if (winnerUid === currentUser.uid) {
-      title.textContent = "YOU WIN! 🏆";
-      title.classList.add("text-yellow-400");
-    } else {
-      title.textContent = "YOU LOSE!";
-      title.classList.add("text-red-500");
-    }
+    if (rank === 1) { title.textContent = "JUARA 1! 🏆"; title.classList.add("text-yellow-400"); }
+    else { title.textContent = `PERINGKAT ${MEDAL[rank - 1] || "#" + rank}`; title.classList.add("text-slate-200"); }
   }
 </script>
 </body>

@@ -50,6 +50,10 @@
     .bgm-yes { background: linear-gradient(135deg, #10B981, #059669); color: #fff; margin-bottom: 8px; box-shadow: 0 8px 24px rgba(16,185,129,.35); }
     .bgm-no { background: transparent; color: #94A3B8; font-weight: 700; }
     .bgm-yes:active, .bgm-no:active { transform: scale(.97); }
+      .logout-btn { position: fixed; z-index: 40; top: calc(12px + env(safe-area-inset-top)); left: max(12px, calc(50% - 228px));
+      width: 44px; height: 44px; border-radius: 9999px; display: flex; align-items: center; justify-content: center;
+      background: rgba(127,29,29,.85); border: 1px solid rgba(248,113,113,.4); color: #fff; font-size: 16px; backdrop-filter: blur(8px); }
+    .logout-btn:active { transform: scale(.92); }
   </style>
 </head>
 <body>
@@ -63,22 +67,11 @@
 
   <!-- PLAYERS -->
   <section class="glass mx-4 rounded-3xl px-4 py-3 shrink-0">
-    <div class="flex items-center justify-between gap-2">
-      <div class="flex flex-col items-center gap-1 w-5/12 min-w-0">
-        <img id="hostAvatar" src="" alt="" class="avatar border-[3px] border-red-500 shadow-[0_0_16px_rgba(239,68,68,.4)]">
-        <span class="font-bold text-sm truncate max-w-full" id="hostName">Waiting...</span>
-        <span class="text-[9px] bg-red-500/20 text-red-400 px-2.5 py-0.5 rounded-full font-black uppercase tracking-widest">Host</span>
-      </div>
-      <div class="text-3xl font-black italic vs-text">VS</div>
-      <div class="flex flex-col items-center gap-1 w-5/12 min-w-0">
-        <div id="playerAvatarContainer" class="avatar border-[3px] border-blue-500 border-dashed flex items-center justify-center bg-slate-800">
-          <i class="fa-solid fa-user-astronaut text-xl text-slate-500"></i>
-        </div>
-        <img id="playerAvatar" src="" alt="" class="avatar border-[3px] border-blue-500 shadow-[0_0_16px_rgba(59,130,246,.4)] hidden">
-        <span class="font-bold text-sm text-slate-500 truncate max-w-full" id="playerName">Waiting Player...</span>
-        <span class="text-[9px] bg-blue-500/20 text-blue-400 px-2.5 py-0.5 rounded-full font-black uppercase tracking-widest">Player</span>
-      </div>
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-[11px] font-bold uppercase tracking-widest text-slate-400">Pemain</span>
+      <span id="playerCount" class="text-[11px] font-black text-emerald-400">1/8</span>
     </div>
+    <div id="playerGrid" class="flex flex-wrap justify-center gap-3 scroll" style="max-height:30vh"></div>
   </section>
 
   <main class="flex-1 min-h-0 flex flex-col px-4 pt-4">
@@ -147,8 +140,8 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-  import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDAijNVFhFmTEMDqY-EKAtIXF6vXD1Hafg",
@@ -179,6 +172,23 @@
   let limit = 20;
   let decksLoaded = false;
   let redirected = false;
+  let leaving = false;
+  const MAX_PLAYERS = 8;
+  let lastPlayers = [];
+  function renderPlayers(list, hostUid) {
+    const g = $("playerGrid"); g.innerHTML = "";
+    list.forEach((p) => {
+      const w = document.createElement("div"); w.className = "flex flex-col items-center gap-1 w-16";
+      const img = document.createElement("img");
+      img.className = "w-12 h-12 rounded-full object-cover border-2 " + (p.uid === hostUid ? "border-red-500" : "border-blue-500");
+      img.src = p.photo || "";
+      const n = document.createElement("span"); n.className = "text-[10px] font-bold truncate max-w-full"; n.textContent = p.name || "Player";
+      w.append(img, n);
+      if (p.uid === hostUid) { const b = document.createElement("span"); b.className = "text-[8px] bg-red-500/20 text-red-400 px-2 rounded-full font-black uppercase"; b.textContent = "Host"; w.append(b); }
+      g.appendChild(w);
+    });
+    $("playerCount").textContent = list.length + "/" + MAX_PLAYERS;
+  }
 
   // --- state fitur custom ---
   let mode = "deck";        // "deck" | "custom"
@@ -355,20 +365,13 @@
 
     onValue(ref(db, `rooms/${roomId}`), (snapshot) => {
       const data = snapshot.val();
-      if (!data) { alert("Room Invalid"); window.location.href = "/"; return; }
+      if (!data) { if (!leaving) alert("Room Invalid"); window.location.href = "/"; return; }
 
       isHost = data.host.uid === currentUser.uid;
-      $("hostAvatar").src = data.host.photo || "";
-      $("hostName").textContent = data.host.name;
-
-      hasPlayer = !!data.player;
-      if (data.player) {
-        $("playerAvatarContainer").classList.add("hidden");
-        $("playerAvatar").classList.remove("hidden");
-        $("playerAvatar").src = data.player.photo || "";
-        $("playerName").textContent = data.player.name;
-        $("playerName").classList.remove("text-slate-500");
-      }
+      const plist = Object.entries(data.players || {}).map(([uid, p]) => ({ uid, ...p }));
+      lastPlayers = plist;
+      renderPlayers(plist, data.host.uid);
+      hasPlayer = plist.length >= 2;
 
       $("hostPanel").classList.toggle("hidden", !isHost);
       $("hostPanel").classList.toggle("flex", isHost);
@@ -393,6 +396,26 @@
     });
   });
 
+  // LOGOUT: keluar dari room + logout akun
+  $("btnLogout").onclick = async () => {
+    if (!confirm("Keluar dari room dan logout?")) return;
+    leaving = true;
+    $("btnLogout").disabled = true;
+    try {
+      const uid = currentUser.uid;
+      const others = lastPlayers.filter((p) => p.uid !== uid);
+      if (!others.length) {
+        await remove(ref(db, `rooms/${roomId}`));          // tidak ada orang lain -> hapus room
+      } else {
+        const u = { [`players/${uid}`]: null };
+        if (isHost) u.host = others[0];                    // host keluar -> host dipindah ke pemain lain
+        await update(ref(db, `rooms/${roomId}`), u);
+      }
+    } catch (e) { console.error(e); }
+    try { await signOut(auth); } catch (e) { console.error(e); }
+    window.location.href = "/";
+  };
+
   // HANYA HOST yang bisa memulai
   $("btnStart").onclick = async () => {
     if (!isHost || !hasPlayer || !isReady()) return;
@@ -414,15 +437,17 @@
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
 
+      const resets = {};
+      lastPlayers.forEach((p) => { const b = `players/${p.uid}/`;
+        Object.assign(resets, { [b + "hp"]: 5, [b + "exp"]: 0, [b + "qIndex"]: 0, [b + "done"]: null, [b + "finishedAt"]: null, [b + "history"]: null }); });
       await update(ref(db, `rooms/${roomId}`), {
+        ...resets,
         questions: json.data,
         tiebreakQuestions: json.tiebreak || null,
         tiebreak: null,
         winReason: null,
         fightStarted: false,
         winner: null,
-        "host/hp": 5, "host/exp": 0, "host/qIndex": 0, "host/done": null, "host/finishedAt": null, "host/history": null,
-        "player/hp": 5, "player/exp": 0, "player/qIndex": 0, "player/done": null, "player/finishedAt": null, "player/history": null,
         status: "playing"
       });
     } catch (err) {
@@ -431,6 +456,8 @@
     }
   };
 </script>
+
+<button type="button" id="btnLogout" class="logout-btn" aria-label="Logout" title="Keluar & Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
 
 <!-- ===== Lobby BGM (tambahan) ===== -->
 <button type="button" id="bgmToggle" class="bgm-btn" aria-label="Aktif/nonaktifkan musik" title="Musik">

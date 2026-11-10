@@ -106,6 +106,7 @@
     signInWithPopup(auth, new GoogleAuthProvider()).catch(console.error);
   };
 
+  const MAX_PLAYERS = 8; // ubah sesuai kebutuhan
   const generateCode = () => Math.random().toString(36).substring(2, 7).toUpperCase();
   const me = () => ({ uid: currentUser.uid, name: currentUser.displayName || "Warrior", photo: currentUser.photoURL || "", hp: 5, exp: 0, qIndex: 0 });
 
@@ -114,6 +115,7 @@
     await set(ref(db, `rooms/${roomCode}`), {
       status: "waiting",
       host: me(),
+      players: { [currentUser.uid]: me() },
       created_at: Date.now()
     });
     window.location.href = `/room?id=${roomCode}`;
@@ -132,15 +134,16 @@
       window.location.href = `/room?id=${code}`;
       return;
     }
-    // Player yang kembali ke room yang sama
-    if (room.player && room.player.uid === currentUser.uid) {
+    const players = room.players || {};
+    // Pemain yang kembali ke room yang sama
+    if (players[currentUser.uid]) {
       window.location.href = room.status === "playing" ? `/game-mode?id=${code}` : `/room?id=${code}`;
       return;
     }
     if (room.status !== "waiting") return alert("Game sudah dimulai atau selesai.");
-    if (room.player) return alert("Room sudah penuh.");
+    if (Object.keys(players).length >= MAX_PLAYERS) return alert(`Room penuh (maks ${MAX_PLAYERS} pemain).`);
 
-    await set(ref(db, `rooms/${code}/player`), me());
+    await set(ref(db, `rooms/${code}/players/${currentUser.uid}`), me());
     window.location.href = `/room?id=${code}`;
   };
 </script>
