@@ -475,11 +475,13 @@
       const cycleInfoNew = { total: meta.total, remaining: meta.remaining, reset: !!meta.cycleReset };
       const resets = {};
       lastPlayers.forEach((p) => { const b = `players/${p.uid}/`;
-        Object.assign(resets, { [b + "hp"]: 5, [b + "exp"]: 0, [b + "qIndex"]: 0, [b + "done"]: null, [b + "finishedAt"]: null, [b + "history"]: null, [b + "streak"]: null, [b + "hit"]: null }); });
+        Object.assign(resets, { [b + "hp"]: 5, [b + "exp"]: 0, [b + "qIndex"]: 0, [b + "done"]: null, [b + "finishedAt"]: null, [b + "history"]: null, [b + "streak"]: null, [b + "hit"]: null, [b + "inv"]: null, [b + "shield"]: null, [b + "extra"]: null }); });
       await update(ref(db, `rooms/${roomId}`), {
         ...resets,
         questions: json.data,
         seenKeys: newSeen,
+        customCards: mode === "custom" ? customCards : null,
+        react: null,
         cycleInfo: cycleInfoNew,
         tiebreakQuestions: json.tiebreak || null,
         tiebreak: null,

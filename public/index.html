@@ -64,7 +64,7 @@
       </div>
 
       <div class="flex gap-2">
-        <input type="text" id="roomCodeInput" placeholder="CODE" autocapitalize="characters" autocomplete="off" class="h-btn min-w-0 flex-1 bg-slate-900 border border-slate-700 rounded-2xl px-3 text-center font-black text-xl uppercase tracking-widest focus:outline-none focus:border-blue-500 text-white" maxlength="5">
+        <input type="text" id="roomCodeInput" placeholder="CODE" inputmode="numeric" pattern="[0-9]*" autocomplete="off" class="h-btn min-w-0 flex-1 bg-slate-900 border border-slate-700 rounded-2xl px-3 text-center font-black text-xl tracking-widest focus:outline-none focus:border-blue-500 text-white" maxlength="5">
         <button id="btnJoinRoom" class="btn-join h-btn w-16 shrink-0 rounded-2xl font-bold text-lg shadow-lg shadow-blue-900/40"><i class="fa-solid fa-right-to-bracket"></i></button>
       </div>
     </div>
@@ -107,11 +107,12 @@
   };
 
   const MAX_PLAYERS = 8; // ubah sesuai kebutuhan
-  const generateCode = () => Math.random().toString(36).substring(2, 7).toUpperCase();
+  const generateCode = () => String(Math.floor(Math.random() * 100000)).padStart(5, "0");
   const me = () => ({ uid: currentUser.uid, name: currentUser.displayName || "Warrior", photo: currentUser.photoURL || "", hp: 5, exp: 0, qIndex: 0 });
 
   document.getElementById("btnCreateRoom").onclick = async () => {
-    const roomCode = generateCode();
+    let roomCode = generateCode();
+    for (let t = 0; t < 10 && (await get(ref(db, `rooms/${roomCode}`))).exists(); t++) roomCode = generateCode(); // hindari kode kembar
     await set(ref(db, `rooms/${roomCode}`), {
       status: "waiting",
       host: me(),
@@ -122,7 +123,7 @@
   };
 
   document.getElementById("btnJoinRoom").onclick = async () => {
-    const code = document.getElementById("roomCodeInput").value.trim().toUpperCase();
+    const code = document.getElementById("roomCodeInput").value.replace(/\D/g, "");
     if (!code) return alert("Masukkan Room Code!");
 
     const snapshot = await get(ref(db, `rooms/${code}`));

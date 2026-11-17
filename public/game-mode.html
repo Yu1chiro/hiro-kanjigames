@@ -89,6 +89,57 @@
     .tabs { display: flex; gap: 6px; margin: 8px 0; }
     .tab { flex: 1; padding: 8px; border-radius: 12px; background: #1E293B; color: #94A3B8; font-weight: 800; font-size: 12px; }
     .tab.active { background: #fff; color: #0F172A; }
+    .fx.block .fx-flash { box-shadow: inset 0 0 100px 12px rgba(56,189,248,.7); }
+    .fx.scramble .fx-flash { box-shadow: inset 0 0 100px 12px rgba(168,85,247,.7); }
+    .fx.freeze .fx-flash { box-shadow: inset 0 0 100px 12px rgba(125,211,252,.8); }
+    /* ITEM, PENGUMUMAN, REAKSI, BEKU */
+    .itembar { position: relative; display: flex; gap: 6px; margin-top: 8px; }
+    .it { display: flex; align-items: center; gap: 4px; background: #1E293B; border: 1px solid #475569; border-radius: 12px; padding: 4px 9px; font-size: 10px; font-weight: 800; color: #fff; }
+    .it:active { transform: scale(.94); } .it.off { opacity: .3; } .it b { color: #FBBF24; font-size: 12px; } .it-i { font-size: 16px; }
+    .reactbar { position: absolute; left: 10px; top: 10px; z-index: 5; display: flex; gap: 4px; }
+    .rbtn { width: 34px; height: 34px; border-radius: 9999px; background: rgba(30,41,59,.9); border: 1px solid #334155; font-size: 16px; }
+    .rbtn:active { transform: scale(.88); }
+    .react-float { position: fixed; z-index: 66; bottom: 150px; display: flex; flex-direction: column; align-items: center; pointer-events: none; animation: rUp 2.2s ease-out forwards; }
+    .react-float span { font-size: 38px; } .react-float small { font-size: 9px; font-weight: 800; color: #CBD5E1; background: rgba(0,0,0,.5); border-radius: 9999px; padding: 1px 6px; }
+    @keyframes rUp { 0% { opacity: 0; transform: translateY(0) scale(.5); } 15% { opacity: 1; transform: translateY(-30px) scale(1.1); } 100% { opacity: 0; transform: translateY(-260px) scale(1); } }
+    .announce { position: fixed; z-index: 68; left: 50%; top: calc(196px + env(safe-area-inset-top)); transform: translateX(-50%); max-width: 92vw; padding: 7px 14px; border-radius: 9999px; background: rgba(15,23,42,.94);
+      border: 1px solid #475569; font-size: 12px; font-weight: 900; text-align: center; pointer-events: none; animation: annIn 1.9s ease-out forwards; }
+    .announce.hidden { display: none; } .announce.gold { border-color: #FBBF24; color: #FDE68A; } .announce.red { border-color: #EF4444; color: #FCA5A5; }
+    @keyframes annIn { 0% { opacity: 0; transform: translate(-50%,-10px); } 10% { opacity: 1; transform: translate(-50%,0); } 85% { opacity: 1; } 100% { opacity: 0; } }
+    .options { position: relative; }
+    .options.frozen .btn-option { filter: grayscale(.6) brightness(.8); pointer-events: none; border-color: #7DD3FC; }
+    .options.frozen::before { content: "❄️ BEKU!"; position: absolute; left: 50%; top: -10px; transform: translateX(-50%); background: #0EA5E9; color: #fff; font-size: 11px; font-weight: 900; padding: 2px 10px; border-radius: 9999px; z-index: 3; }
+    #optionsGrid.scr { animation: shake .4s ease-in-out; }
+    .hist-scroll { overflow-y: auto; flex: 1 1 auto; min-height: 120px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+    .h-item { background: #1E293B; border-left: 4px solid #10B981; border-radius: 12px; padding: 8px 10px; margin-bottom: 6px; text-align: left; }
+    .h-item.bad { border-left-color: #EF4444; }
+    .h-kanji { font-size: 20px; font-weight: 900; }
+    .h-read { font-size: 13px; font-weight: 700; color: #FDE68A; margin-left: 6px; }
+    .h-mean { font-size: 12px; color: #CBD5E1; }
+    .h-pick { font-size: 11px; color: #F87171; margin-top: 2px; }
+      .strip{display:flex;gap:6px;overflow-x:auto;padding:6px 10px;background:#0B1220;border-bottom:1px solid #1E293B;flex-shrink:0}
+    .chip2{display:flex;align-items:center;gap:5px;background:#1E293B;border-radius:9999px;padding:3px 9px 3px 3px;font-size:11px;font-weight:800;white-space:nowrap;border:1px solid transparent}
+    .chip2.me{border-color:#FBBF24}.chip2.dead{opacity:.45}
+    .chip2 img{width:22px;height:22px;border-radius:9999px;object-fit:cover}
+
+    .combo { position: relative; margin-top: 8px; padding: 5px 12px; border-radius: 9999px; font-size: 11px; font-weight: 900; letter-spacing: .06em; text-align: center;
+      background: linear-gradient(135deg,#F59E0B,#EF4444); color: #fff; box-shadow: 0 0 18px rgba(245,158,11,.5); animation: comboPulse .8s ease-in-out infinite; }
+    .combo.soft { background: #1E293B; color: #FBBF24; box-shadow: none; border: 1px solid #334155; animation: none; }
+    .combo.hot { background: linear-gradient(135deg,#7C3AED,#EF4444); box-shadow: 0 0 22px rgba(239,68,68,.6); }
+    @keyframes comboPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+    /* EFEK SERANGAN (partikel, tidak menutup soal) */
+    .fx { position: fixed; inset: 0; z-index: 65; pointer-events: none; overflow: hidden; }
+    .fx.hidden { display: none; }
+    .fx-flash { position: absolute; inset: 0; animation: fxFlash .8s ease-out forwards; }
+    .fx.bolt .fx-flash { box-shadow: inset 0 0 90px 10px rgba(250,204,21,.65); }
+    .fx.bomb .fx-flash { box-shadow: inset 0 0 100px 14px rgba(249,115,22,.75); }
+    .fx.in.bolt .fx-flash, .fx.in.bomb .fx-flash { box-shadow: inset 0 0 110px 16px rgba(239,68,68,.8); }
+    .fx-icon { position: absolute; inset: 0; }
+    .fx-p { position: absolute; border-radius: 2px; opacity: 0; animation: pBurst var(--t,.9s) ease-out forwards; }
+    .fx-text { position: absolute; left: 50%; top: calc(112px + env(safe-area-inset-top)); transform: translateX(-50%); white-space: nowrap; padding: 4px 12px; border-radius: 9999px;
+      background: rgba(0,0,0,.65); font-weight: 900; font-size: 12px; letter-spacing: .06em; animation: fxFlash 1.4s ease-out forwards; }
+    @keyframes fxFlash { 0% { opacity: 0; } 12% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes pBurst { 0% { opacity: 1; transform: translate(0,0) rotate(0) scale(1); } 100% { opacity: 0; transform: translate(var(--dx),var(--dy)) rotate(var(--r)) scale(.3); } }
     .hist-scroll { overflow-y: auto; flex: 1 1 auto; min-height: 120px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
     .h-item { background: #1E293B; border-left: 4px solid #10B981; border-radius: 12px; padding: 8px 10px; margin-bottom: 6px; text-align: left; }
     .h-item.bad { border-left-color: #EF4444; }
@@ -145,10 +196,12 @@
   <!-- KANJI -->
   <main class="arena" id="arenaMain">
     <button id="btnStats" class="btn-stats" aria-label="Statistik"><i class="fa-solid fa-ranking-star"></i></button>
+    <div class="reactbar"><button type="button" class="rbtn" data-e="😂">😂</button><button type="button" class="rbtn" data-e="🔥">🔥</button><button type="button" class="rbtn" data-e="😭">😭</button><button type="button" class="rbtn" data-e="👏">👏</button></div>
     <div class="pill" id="pillText">Pilih Cara Baca</div>
     <div id="kanjiDisplay" class="kanji jp">&nbsp;</div>
     <div id="comboBadge" class="combo hidden"></div>
     <div id="qCount" class="qcount"></div>
+    <div id="itemBar" class="itembar"></div>
     <button id="btnEnd" class="hidden relative mt-3 px-4 py-2 rounded-xl bg-slate-800 text-amber-300 text-xs font-black uppercase tracking-wider">Akhiri Game Sekarang</button>
   </main>
 
@@ -176,12 +229,15 @@
       <p class="text-sm font-bold text-amber-300 mb-6" id="winReason"></p>
       <div id="finalBoard" class="text-left mb-3" style="max-height:34vh;overflow-y:auto"></div>
       <button id="btnStatsOver" class="btn-big btn-dark mb-3" style="font-size: 16px"><i class="fa-solid fa-ranking-star mr-2"></i>RIWAYAT & STATISTIK</button>
+      <button id="btnRematch" class="btn-big btn-white mb-3 hidden">🔁 MAIN LAGI (REMATCH)</button>
+      <div id="rematchWait" class="text-slate-400 text-sm font-bold mb-3 hidden"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Menunggu host memulai rematch...</div>
       <button id="btnCopyOver" class="btn-big btn-dark mb-3 hidden" style="font-size: 16px"><i class="fa-solid fa-copy mr-2"></i>SALIN DAFTAR KANJI</button>
       <button onclick="window.location.href='/'" class="btn-big btn-white mb-3">PLAY AGAIN</button>
       <button id="btnLobby" class="btn-big btn-dark" style="font-size: 16px">BACK TO LOBBY</button>
     </div>
   </div>
 
+  <div id="announce" class="announce hidden"></div>
   <!-- EFEK SERANGAN -->
   <div id="fx" class="fx hidden"><div class="fx-flash"></div><div id="fxIcon" class="fx-icon"></div><div id="fxText" class="fx-text"></div></div>
 
@@ -238,7 +294,7 @@
   if (!roomId) window.location.href = "/";
 
   let currentUser = null, isHost = false, questions = [], shownIndex = -1;
-  let streak = 0, streakInit = false, hitSeen = null, fxTimer;
+  let streak = 0, streakInit = false, hitSeen = null, fxTimer, curSecs = 15;
   let timerInterval, timeLeft = 15, isProcessing = false, gameOverShown = false, doneSent = false, finishing = false, lastData = null;
 
   // ===== Helpers =====
@@ -309,7 +365,7 @@
   function renderMe(p, rank, total) {
     $("p1Name").textContent = p.name || "Player";
     if ($("p1Avatar").getAttribute("src") !== (p.photo || "")) $("p1Avatar").src = p.photo || "";
-    $("p1Exp").textContent = `${p.exp || 0} EXP`;
+    $("p1Exp").textContent = `${p.exp || 0} EXP${p.shield ? ` 🛡️×${p.shield}` : ""}`;
     let hearts = "";
     for (let i = 0; i < 5; i++) hearts += `<i class="fa-solid fa-heart hp-heart ${i >= (p.hp || 0) ? "lost" : ""}"></i>`;
     $("p1HpContainer").innerHTML = hearts;
@@ -349,8 +405,8 @@
     } else el.className = "combo hidden";
   }
 
-  function pickTarget() {
-    const c = plist(lastData).filter((p) => p.uid !== currentUser.uid && (p.hp || 0) > 0 && !p.done && (p.exp || 0) > 0);
+  function pickTarget(any) {
+    const c = plist(lastData).filter((p) => p.uid !== currentUser.uid && (p.hp || 0) > 0 && !p.done && (any || (p.exp || 0) > 0));
     if (!c.length) return null;
     c.sort((a, b) => (b.exp || 0) - (a.exp || 0));   // lawan dengan EXP tertinggi jadi sasaran
     return c[0];
@@ -368,17 +424,191 @@
     } catch (e) {}
   }
 
+  const FX = {
+    bolt: { i: "⚡", l: "PETIR", c: ["#FACC15", "#FDE047", "#93C5FD", "#FFFFFF"] },
+    bomb: { i: "💣", l: "BOM", c: ["#F97316", "#EF4444", "#FACC15", "#FDE68A"] },
+    block: { i: "🛡️", l: "DIBLOK", c: ["#38BDF8", "#7DD3FC", "#FFFFFF", "#A5F3FC"] },
+    scramble: { i: "🔀", l: "ACAK OPSI", c: ["#A855F7", "#C084FC", "#F0ABFC", "#FFFFFF"] },
+    freeze: { i: "❄️", l: "BEKU", c: ["#7DD3FC", "#BAE6FD", "#FFFFFF", "#38BDF8"] },
+  };
   function showFx(type, dir, name, dmg) {
-    const fx = $("fx"), bomb = type === "bomb", label = bomb ? "BOM" : "PETIR";
+    const f = FX[type] || FX.bolt, fx = $("fx"), bomb = type === "bomb", tall = type === "bolt";
     fx.classList.add("hidden"); void fx.offsetWidth;
-    fx.className = `fx ${bomb ? "bomb" : "bolt"} ${dir}`;
-    $("fxIcon").textContent = bomb ? "💣" : "⚡";
-    $("fxText").textContent = dir === "in" ? `${label} dari ${name}! −${dmg} EXP` : `${label} ke ${name}! −${dmg} EXP`;
-    if (dir === "in") shake();
-    sfxBoom(bomb);
+    fx.className = `fx ${FX[type] ? type : "bolt"} ${dir}`;
+    $("fxText").textContent = type === "block"
+      ? (dir === "in" ? `🛡️ Perisaimu menahan serangan ${name}!` : `🛡️ Seranganmu diblok perisai ${name}`)
+      : `${f.i} ${f.l} ${dir === "in" ? "dari" : "ke"} ${name}${dmg ? ` −${dmg}` : ""}`;
+    const box = $("fxIcon"); box.innerHTML = "";
+    for (let i = 0; i < (bomb ? 34 : 26); i++) {
+      const p = document.createElement("span"), sz = 3 + Math.random() * 6;
+      p.className = "fx-p";
+      p.style.cssText = `left:${10 + Math.random() * 80}%;top:${bomb ? 20 + Math.random() * 40 : 8 + Math.random() * 25}%;width:${sz}px;height:${tall ? sz * 3 : sz}px;background:${f.c[i % f.c.length]};` +
+        `--dx:${(Math.random() - .5) * (bomb ? 220 : 90)}px;--dy:${bomb ? (Math.random() - .5) * 220 : 80 + Math.random() * 180}px;--r:${Math.random() * 360}deg;--t:${.6 + Math.random() * .6}s`;
+      box.appendChild(p);
+    }
+    if (dir === "in" && (type === "bolt" || type === "bomb")) shake();
+    if (type === "bolt" || type === "bomb") sfxBoom(bomb);
     clearTimeout(fxTimer);
-    fxTimer = setTimeout(() => fx.classList.add("hidden"), 1500);
+    fxTimer = setTimeout(() => fx.classList.add("hidden"), 1400);
   }
+
+  // ===== Pengumuman =====
+  const annQ = []; let annBusy = false, prevState = null;
+  function announce(text, cls = "") { if (annQ.length > 3) annQ.shift(); annQ.push({ text, cls }); if (!annBusy) nextAnn(); }
+  function nextAnn() {
+    const el = $("announce"), it = annQ.shift();
+    if (!it) { annBusy = false; el.className = "announce hidden"; return; }
+    annBusy = true; el.className = "announce hidden"; void el.offsetWidth;
+    el.className = "announce " + it.cls; el.textContent = it.text;
+    setTimeout(nextAnn, 1900);
+  }
+  function detectEvents(data, list) {
+    if (!data.fightStarted) { prevState = null; return; }
+    const cur = {};
+    list.forEach((p, i) => (cur[p.uid] = { rank: i + 1, hp: p.hp || 0, streak: p.streak || 0, name: p.name || "Player" }));
+    if (prevState) {
+      const pl = Object.keys(prevState).find((u) => prevState[u].rank === 1), nl = list[0].uid, old = list.find((p) => p.uid === pl);
+      if (pl && nl !== pl && old && (list[0].exp || 0) > (old.exp || 0)) announce(`👑 ${cur[nl].name} menyalip ${prevState[pl].name} ke peringkat 1!`, "gold");
+      list.forEach((p) => {
+        const o = prevState[p.uid], c = cur[p.uid]; if (!o) return;
+        if (o.hp > 1 && c.hp === 1) announce(`💀 ${c.name} sekarat, 1 HP!`, "red");
+        else if (o.hp > 0 && c.hp <= 0) announce(`☠️ ${c.name} tumbang!`, "red");
+        if (o.streak < 5 && c.streak >= 5) announce(`🔥 ${c.name} COMBO ${c.streak}!`, "gold");
+      });
+    }
+    prevState = cur;
+  }
+
+  // ===== Ronde final & boss =====
+  const finalN = (len) => (len >= 10 ? 5 : len >= 6 ? 2 : 0);
+  const qInfo = (idx) => ({ final: finalN(questions.length) > 0 && idx >= questions.length - finalN(questions.length), boss: !(questions[idx] && questions[idx].retry) && (idx + 1) % 10 === 0 });
+
+  // ===== Soal salah muncul lagi (3 soal kemudian, sekali saja) =====
+  function effList(data, me) {
+    const list = data.questions ? Object.values(data.questions) : [];
+    Object.entries(me.extra || {}).sort((a, b) => Number(a[0]) - Number(b[0])).forEach(([, e]) => list.splice(Math.min(e.at, list.length), 0, e.q));
+    return list;
+  }
+  function requeue(updates, base, idx, q) {
+    if (q.retry) return;
+    const n = Object.keys((lastData.players[currentUser.uid] || {}).extra || {}).length;
+    const o = optsOf(q).map((x) => ({ text: x.text, isCorrect: !!x.isCorrect }));
+    for (let i = o.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; }
+    updates[`${base}/extra/${n}`] = { at: idx + 4, q: { key: q.key || "", kanji: q.kanji, arti: q.arti, options: o, retry: true } };
+  }
+
+  // ===== Item =====
+  const ITEMS = { shield: "🛡️", scramble: "🔀", freeze: "❄️", heal: "💊" }, ILABEL = { shield: "Perisai", scramble: "Acak", freeze: "Beku", heal: "Heal" };
+  let frozenUntil = 0, frozenTimer;
+  function renderItems(me) {
+    const inv = me.inv || {};
+    $("itemBar").innerHTML = Object.keys(ITEMS).map((k) => { const n = inv[k] || 0;
+      return `<button type="button" data-it="${k}" class="it ${n ? "" : "off"}"><span class="it-i">${ITEMS[k]}</span><span>${ILABEL[k]}</span><b>${n}</b></button>`; }).join("");
+  }
+  $("itemBar").onclick = (e) => { const b = e.target.closest("[data-it]"); if (b) useItem(b.dataset.it); };
+  function giveItem(updates, base) {
+    const inv = lastData.players[currentUser.uid].inv || {}, total = Object.values(inv).reduce((a, b) => a + (b || 0), 0);
+    const keys = Object.keys(ITEMS).filter((k) => (inv[k] || 0) < 2);
+    if (total >= 4 || !keys.length) return;
+    const k = keys[Math.floor(Math.random() * keys.length)];
+    updates[`${base}/inv/${k}`] = increment(1);
+    announce(`🎁 Dapat item ${ITEMS[k]} ${ILABEL[k]}!`, "gold");
+  }
+  // Serangan ke lawan; perisai lawan menahan 1 serangan apa pun
+  function sendAttack(updates, t, kind, dmg) {
+    const tb = `rooms/${roomId}/players/${t.uid}`, from = currentUser.displayName || "Lawan";
+    if ((t.shield || 0) > 0) { updates[`${tb}/shield`] = increment(-1); updates[`${tb}/hit`] = { type: "block", from, dmg: 0, at: Date.now() }; return "block"; }
+    if (kind === "bolt" || kind === "bomb") updates[`${tb}/exp`] = increment(-dmg);
+    updates[`${tb}/hit`] = { type: kind, from, dmg, at: Date.now() };
+    return kind;
+  }
+  function useItem(name) {
+    if (!lastData) return;
+    const me = lastData.players[currentUser.uid];
+    if (!me || me.done || (me.hp || 0) <= 0 || ((me.inv || {})[name] || 0) <= 0) return;
+    const base = `rooms/${roomId}/players/${currentUser.uid}`, u = { [`${base}/inv/${name}`]: increment(-1) };
+    if (name === "heal") {
+      if ((me.hp || 0) >= 5) return announce("💊 HP sudah penuh");
+      u[`${base}/hp`] = Math.min(5, (me.hp || 0) + 1); announce("💊 +1 HP!", "gold");
+    } else if (name === "shield") {
+      u[`${base}/shield`] = (me.shield || 0) + 1; announce("🛡️ Perisai aktif — kebal 1 serangan", "gold");
+    } else {
+      const t = pickTarget(true);
+      if (!t) return announce("Belum ada lawan yang bisa diserang");
+      showFx(sendAttack(u, t, name, 0), "out", t.name || "Lawan", 0);
+    }
+    update(ref(db), u).catch(console.error);
+  }
+  function scrambleOptions() {
+    if (isProcessing) return;
+    const g = $("optionsGrid"), k = [...g.children];
+    for (let i = k.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [k[i], k[j]] = [k[j], k[i]]; }
+    k.forEach((x) => g.appendChild(x)); g.classList.add("scr"); setTimeout(() => g.classList.remove("scr"), 500);
+  }
+  function freezeMe() {
+    frozenUntil = Date.now() + 3000;
+    const f = document.querySelector(".options"); f.classList.add("frozen");
+    clearTimeout(frozenTimer); frozenTimer = setTimeout(() => f.classList.remove("frozen"), 3000);
+  }
+  function onHit(h) {
+    showFx(h.type, "in", h.from, h.dmg);
+    if (h.type === "scramble") scrambleOptions();
+    if (h.type === "freeze") freezeMe();
+  }
+  const btnAt = (i) => [...document.querySelectorAll(".btn-option")].find((b) => b.dataset.i == i);
+
+  // ===== Reaksi emoji =====
+  const REACTS = ["😂", "🔥", "😭", "👏"]; let lastReactAt = null, lastReactSent = 0;
+  function floatReact(emoji, name) {
+    const s = document.createElement("div"); s.className = "react-float"; s.style.left = 8 + Math.random() * 72 + "%";
+    s.innerHTML = `<span>${emoji}</span><small>${esc(name)}</small>`; document.body.appendChild(s); setTimeout(() => s.remove(), 2200);
+  }
+  document.querySelectorAll(".rbtn").forEach((b) => (b.onclick = () => {
+    if (!currentUser || Date.now() - lastReactSent < 1000) return;
+    lastReactSent = Date.now(); floatReact(b.dataset.e, "Kamu");
+    update(ref(db, `rooms/${roomId}`), { react: { emoji: b.dataset.e, from: currentUser.displayName || "Player", uid: currentUser.uid, at: Date.now() } }).catch(() => {});
+  }));
+  function handleReact(data) {
+    const r = data.react;
+    if (lastReactAt === null) { lastReactAt = r ? r.at : 0; return; }
+    if (r && r.at !== lastReactAt) { lastReactAt = r.at; if (r.uid !== currentUser.uid && REACTS.includes(r.emoji)) floatReact(r.emoji, r.from); }
+  }
+
+  // ===== Rematch satu tap (host) =====
+  function resetLocal() {
+    gameOverShown = false; doneSent = false; finishing = false; shownIndex = -1; streakInit = false; streak = 0; frozenUntil = 0; prevState = null; annQ.length = 0;
+    $("gameOverOverlay").classList.add("hidden");
+    $("winnerText").classList.remove("text-yellow-400", "text-slate-200");
+    $("btnRematch").disabled = false; $("btnRematch").textContent = "🔁 MAIN LAGI (REMATCH)";
+    renderCombo();
+  }
+  async function rematch() {
+    if (!isHost || !lastData) return;
+    const d = lastData, s = d.settings || {}, btn = $("btnRematch"), limit = s.limit || 20;
+    btn.disabled = true; btn.textContent = "Menyiapkan rematch...";
+    try {
+      const seen = Array.isArray(d.seenKeys) ? d.seenKeys : Object.values(d.seenKeys || {});
+      let res;
+      if (s.mode === "custom") {
+        const cards = Array.isArray(d.customCards) ? d.customCards : Object.values(d.customCards || {});
+        if (!cards.length) throw new Error("Data custom tidak tersimpan. Kembali ke lobby.");
+        res = await fetch("/api/battle/generate-custom", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ limit, cards, seen }) });
+      } else {
+        const deckIds = Array.isArray(s.deckIds) ? s.deckIds : Object.values(s.deckIds || {});
+        res = await fetch("/api/battle/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ limit, deckIds, seen }) });
+      }
+      const json = await res.json(); if (!res.ok) throw new Error(json.error);
+      const meta = json.meta || { keys: [], cycleReset: false, total: 0, remaining: 0 };
+      const newSeen = (meta.cycleReset ? meta.keys : [...new Set([...seen, ...meta.keys])]).slice(-5000);
+      const u = {};
+      plist(d).forEach((p) => { const b = `players/${p.uid}/`;
+        Object.assign(u, { [b + "hp"]: 5, [b + "exp"]: 0, [b + "qIndex"]: 0, [b + "done"]: null, [b + "finishedAt"]: null, [b + "history"]: null, [b + "streak"]: null, [b + "hit"]: null, [b + "inv"]: null, [b + "shield"]: null, [b + "extra"]: null }); });
+      await update(ref(db, `rooms/${roomId}`), { ...u, questions: json.data, tiebreakQuestions: json.tiebreak || null, seenKeys: newSeen,
+        cycleInfo: { total: meta.total, remaining: meta.remaining, reset: !!meta.cycleReset }, tiebreak: null, winReason: null, winner: null, react: null,
+        fightStarted: true, fightAt: Date.now(), status: "playing" });
+    } catch (e) { alert(e.message); btn.disabled = false; btn.textContent = "🔁 MAIN LAGI (REMATCH)"; }
+  }
+  $("btnRematch").onclick = rematch;
 
   async function copyText(text) {
     try { await navigator.clipboard.writeText(text); return true; }
@@ -438,17 +668,21 @@
       if (!me) { window.location.href = "/"; return; }
 
       isHost = data.host.uid === currentUser.uid;
-      questions = data.questions ? Object.values(data.questions) : [];
+      questions = effList(data, me);
       lastData = data;
+      if (data.status !== "finished" && gameOverShown) resetLocal();
+      handleReact(data);
       if (!streakInit) { streakInit = true; streak = me.streak || 0; hitSeen = (me.hit && me.hit.at) || 0; }
       else if (me.hit && me.hit.at !== hitSeen) {
         hitSeen = me.hit.at;
-        if (data.status !== "finished") showFx(me.hit.type, "in", me.hit.from, me.hit.dmg);
+        if (data.status !== "finished") onHit(me.hit);
       }
 
       const list = ranked(data);
       renderMe(me, list.findIndex((p) => p.uid === currentUser.uid) + 1, list.length);
       renderStrip(list);
+      renderItems(me);
+      if (data.status !== "finished") detectEvents(data, list);
       if (!$("statsModal").classList.contains("hidden")) renderStats();
 
       if (data.status === "finished") return showGameOver(list, me);
@@ -498,6 +732,7 @@
       const b = document.createElement("button");
       b.type = "button";
       b.className = "btn-option jp";
+      b.dataset.i = i;
       b.textContent = opt.text;
       b.onclick = () => onPick(i, !!opt.isCorrect);
       grid.appendChild(b);
@@ -506,11 +741,15 @@
 
   function loadQuestion(index) {
     isProcessing = false;
-    renderQuestion(questions[index], selectAnswer);
-    $("pillText").textContent = "Pilih Cara Baca";
+    const q = questions[index], info = qInfo(index);
+    curSecs = info.boss ? 10 : 15;
+    renderQuestion(q, selectAnswer);
+    $("pillText").textContent = info.boss ? `👹 BOSS • EXP ×${3 + (info.final ? 1 : 0)} • 10 dtk` : q.retry ? "🔁 Ulangan — tadi kamu salah" : info.final ? "🔥 FINAL ROUND • EXP ×2" : "Pilih Cara Baca";
     $("qCount").textContent = `Soal ${index + 1} / ${questions.length}`;
+    if (info.final && index === questions.length - finalN(questions.length)) announce("🔥 FINAL ROUND! Semua EXP ×2", "gold");
+    if (info.boss) announce("👹 SOAL BOSS! Timer 10 detik, EXP besar", "red");
     renderCombo();
-    resetTimer();
+    resetTimer(handleTimeOut, curSecs);
   }
 
   function resetTimer(cb = handleTimeOut, secs = 15) {
@@ -542,7 +781,7 @@
     const buttons = document.querySelectorAll(".btn-option");
     buttons.forEach((b) => (b.disabled = true));
     const ci = optsOf(q).findIndex((o) => o.isCorrect);
-    if (buttons[ci]) buttons[ci].classList.add("btn-correct");
+    if (btnAt(ci)) btnAt(ci).classList.add("btn-correct");
     streak = 0; renderCombo();
     showToast(q, "time");
     const base = `rooms/${roomId}/players/${currentUser.uid}`;
@@ -552,11 +791,12 @@
       [`${base}/qIndex`]: increment(1),
       [`${base}/history/${idx}`]: { kanji: q.kanji, furigana: correctText(q), arti: q.arti, picked: null, ok: false, timeout: true },
     };
+    requeue(updates, base, idx, q);
     setTimeout(() => update(ref(db), updates), WRONG_DELAY);
   }
 
   function selectAnswer(index, isCorrect) {
-    if (isProcessing) return;
+    if (isProcessing || Date.now() < frozenUntil) return;
     isProcessing = true;
     clearInterval(timerInterval);
     const idx = shownIndex, q = questions[idx], o = optsOf(q);
@@ -568,32 +808,32 @@
     updates[`${base}/history/${idx}`] = { kanji: q.kanji, furigana: correctText(q), arti: q.arti, picked: o[index].text, ok: isCorrect, timeout: false };
     if (isCorrect) {
       play(sfxCorrect);
-      buttons[index].classList.add("btn-correct");
-      // Combo: bonus dasar + kecepatan dikali 2x (streak 3-4) atau 3x (streak 5+)
-      mult = multOf(streak + 1);
+      btnAt(index).classList.add("btn-correct");
+      // EXP = (20 + sisa detik) x (combo 1-3 + final +1 + boss +2)
+      const info = qInfo(idx), fast = timeLeft >= curSecs * 0.8;
+      mult = multOf(streak + 1) + (info.final ? 1 : 0) + (info.boss ? 2 : 0);
       gain = Math.round((20 + Math.max(0, timeLeft)) * mult);
       streak += 1;
       updates[`${base}/exp`] = increment(gain);
       updates[`${base}/streak`] = streak;
-      if (streak >= 3) {                       // serangan ke lawan: petir (streak 3-4) / bom (streak 5+)
+      if (streak >= 3) {                       // serangan otomatis: petir (streak 3-4) / bom (streak 5+)
         const bomb = streak >= 5, t = pickTarget();
         if (t) {
-          const dmg = Math.min(bomb ? 30 : 15, t.exp || 0);
-          updates[`rooms/${roomId}/players/${t.uid}/exp`] = increment(-dmg);
-          updates[`rooms/${roomId}/players/${t.uid}/hit`] = { type: bomb ? "bomb" : "bolt", from: currentUser.displayName || "Lawan", dmg, at: Date.now() };
-          showFx(bomb ? "bomb" : "bolt", "out", t.name || "Lawan", dmg);
+          const dmg = Math.min(bomb ? 15 : 5, t.exp || 0);
+          showFx(sendAttack(updates, t, bomb ? "bomb" : "bolt", dmg), "out", t.name || "Lawan", dmg);
         }
       }
+      if (streak === 3 || streak % 5 === 0 || (fast && Math.random() < 0.2)) giveItem(updates, base);   // item dari combo / jawaban cepat
       renderCombo();
     } else {
       play(sfxWrong);
-      buttons[index].classList.add("btn-wrong");
+      btnAt(index).classList.add("btn-wrong");
       updates[`${base}/hp`] = increment(-1);
       updates[`${base}/exp`] = increment(-5);
-      streak = 0; updates[`${base}/streak`] = 0; renderCombo();
+      streak = 0; updates[`${base}/streak`] = 0; renderCombo(); requeue(updates, base, idx, q);
       shake();
       const ci = o.findIndex((x) => x.isCorrect);
-      if (buttons[ci]) buttons[ci].classList.add("btn-correct");
+      if (btnAt(ci)) btnAt(ci).classList.add("btn-correct");
     }
     showToast(q, isCorrect ? "ok" : "bad", o[index].text);
     if (isCorrect) $("toastTitle").textContent = `✓ Benar! +${gain} EXP${mult > 1 ? ` (×${mult})` : ""}`;
@@ -614,6 +854,8 @@
     $("winReason").textContent = `Peringkat ${rank} dari ${list.length} pemain`;
     $("finalBoard").innerHTML = boardHTML(list);
     $("btnCopyOver").classList.toggle("hidden", !isCustom());
+    $("btnRematch").classList.toggle("hidden", !isHost);
+    $("rematchWait").classList.toggle("hidden", isHost);
     const title = $("winnerText");
     if (rank === 1) { title.textContent = "JUARA 1! 🏆"; title.classList.add("text-yellow-400"); }
     else { title.textContent = `PERINGKAT ${MEDAL[rank - 1] || "#" + rank}`; title.classList.add("text-slate-200"); }
