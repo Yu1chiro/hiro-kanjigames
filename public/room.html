@@ -110,13 +110,19 @@
       </div>
 
       <div class="shrink-0 pt-2">
-        <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Jumlah Soal</p>
-        <div class="grid grid-cols-4 gap-2" id="limitChips">
+        <div class="flex items-center justify-between mb-1.5">
+          <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400">Jumlah Soal</p>
+          <span id="limitHint" class="text-[11px] font-bold text-slate-500"></span>
+        </div>
+        <div class="grid grid-cols-5 gap-2" id="limitChips">
           <button class="chip rounded-xl py-2 text-sm font-black" data-limit="10">10</button>
           <button class="chip rounded-xl py-2 text-sm font-black active" data-limit="20">20</button>
           <button class="chip rounded-xl py-2 text-sm font-black" data-limit="30">30</button>
           <button class="chip rounded-xl py-2 text-sm font-black" data-limit="50">50</button>
+          <button class="chip rounded-xl py-2 text-[11px] font-black uppercase" data-limit="1000">Semua</button>
         </div>
+        <input id="limitInput" type="number" inputmode="numeric" min="5" max="1000" placeholder="Atau ketik jumlah sendiri (mis. 100, 200)"
+          class="chip w-full mt-2 rounded-xl py-2 px-3 text-center text-sm font-black text-white focus:outline-none" style="border-color:#334155">
       </div>
     </div>
 
@@ -323,6 +329,7 @@
 
   // Sinkron info sumber soal ke Firebase (untuk ditampilkan ke player)
   function pushSettings() {
+    updateHint();
     $("selectedCount").textContent = selected.size + " dipilih";
     let deckIds = [], deckNames = [];
     if (mode === "deck") {
@@ -351,13 +358,31 @@
     }
   }
 
-  document.querySelectorAll("#limitChips .chip").forEach((chip) => {
-    chip.onclick = () => {
-      limit = Number(chip.dataset.limit);
-      document.querySelectorAll("#limitChips .chip").forEach((c) => c.classList.toggle("active", c === chip));
-      pushSettings();
-    };
-  });
+  // ===== Jumlah soal custom (5 - 1000) =====
+  const MAX_LIMIT = 1000, PRESETS = [10, 20, 30, 50, 1000];
+  let roomSeen = [];      // kanji yang sudah pernah muncul di room ini (lintas game)
+  let cycleInfo = null;   // info siklus dari game terakhir
+
+  function availableCount() {
+    if (mode === "custom") return customCards ? customCards.length : 0;
+    return decks.filter((d) => selected.has(d.id)).reduce((a, d) => a + d.card_count, 0);
+  }
+  function updateHint() {
+    const el = $("limitHint"); if (!el) return;
+    const n = availableCount();
+    let t = n ? `Tersedia ${n} kanji` : "";
+    if (cycleInfo && cycleInfo.total) t += `${t ? " · " : ""}belum muncul: ${cycleInfo.remaining}/${cycleInfo.total}`;
+    el.textContent = t;
+  }
+  function setLimit(n, fromInput) {
+    limit = Math.max(5, Math.min(MAX_LIMIT, Math.floor(Number(n)) || 20));
+    document.querySelectorAll("#limitChips .chip").forEach((c) => c.classList.toggle("active", Number(c.dataset.limit) === limit));
+    if (!fromInput) $("limitInput").value = PRESETS.includes(limit) ? "" : limit;
+    pushSettings();
+  }
+  document.querySelectorAll("#limitChips .chip").forEach((chip) => { chip.onclick = () => setLimit(chip.dataset.limit); });
+  $("limitInput").addEventListener("input", (e) => { if (e.target.value !== "") setLimit(e.target.value, true); });
+  $("limitInput").addEventListener("blur", (e) => { if (e.target.value !== "") setLimit(e.target.value); });
 
   onAuthStateChanged(auth, (user) => {
     if (!user) return (window.location.href = "/");
@@ -370,6 +395,8 @@
       isHost = data.host.uid === currentUser.uid;
       const plist = Object.entries(data.players || {}).map(([uid, p]) => ({ uid, ...p }));
       lastPlayers = plist;
+      roomSeen = Array.isArray(data.seenKeys) ? data.seenKeys : Object.values(data.seenKeys || {});
+      cycleInfo = data.cycleInfo || null;
       renderPlayers(plist, data.host.uid);
       hasPlayer = plist.length >= 2;
 
@@ -384,10 +411,11 @@
         const s = data.settings;
         const names = s && s.deckNames ? Object.values(s.deckNames) : [];
         $("guestDecks").textContent = names.length ? names.join(", ") : "Host belum memilih soal";
-        $("guestLimit").textContent = s && s.limit ? s.limit + " soal" : "";
+        $("guestLimit").textContent = s && s.limit ? (s.limit >= MAX_LIMIT ? "Semua kosakata" : s.limit + " soal") : "";
       }
 
       refreshStartButton();
+      updateHint();
 
       if (data.status === "playing" && !redirected) {
         redirected = true;
@@ -429,20 +457,30 @@
         res = await fetch("/api/battle/generate-custom", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ limit, cards: customCards })
+          body: JSON.stringify({ limit, cards: customCards, seen: roomSeen })
         });
       } else {
-        res = await fetch(`/api/battle/generate?limit=${limit}&deckIds=${[...selected].join(",")}`);
+        res = await fetch("/api/battle/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ limit, deckIds: [...selected], seen: roomSeen })
+        });
       }
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
 
+      // Lacak kanji yang sudah muncul: siklus baru jika semua kanji sudah pernah muncul
+      const meta = json.meta || { keys: [], cycleReset: false, total: 0, remaining: 0 };
+      const newSeen = (meta.cycleReset ? meta.keys : [...new Set([...roomSeen, ...meta.keys])]).slice(-5000);
+      const cycleInfoNew = { total: meta.total, remaining: meta.remaining, reset: !!meta.cycleReset };
       const resets = {};
       lastPlayers.forEach((p) => { const b = `players/${p.uid}/`;
-        Object.assign(resets, { [b + "hp"]: 5, [b + "exp"]: 0, [b + "qIndex"]: 0, [b + "done"]: null, [b + "finishedAt"]: null, [b + "history"]: null }); });
+        Object.assign(resets, { [b + "hp"]: 5, [b + "exp"]: 0, [b + "qIndex"]: 0, [b + "done"]: null, [b + "finishedAt"]: null, [b + "history"]: null, [b + "streak"]: null, [b + "hit"]: null }); });
       await update(ref(db, `rooms/${roomId}`), {
         ...resets,
         questions: json.data,
+        seenKeys: newSeen,
+        cycleInfo: cycleInfoNew,
         tiebreakQuestions: json.tiebreak || null,
         tiebreak: null,
         winReason: null,

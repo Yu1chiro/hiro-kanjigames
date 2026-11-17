@@ -3,7 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const { Pool } = require("pg");
-const { randomInt } = require("crypto");
+const { randomInt, createHash } = require("crypto");
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -60,11 +60,18 @@ const norm = (v) =>
     .replace(/\s+/g, "")
     .toLowerCase();
 
+const MAX_LIMIT = 1000; // jumlah soal bebas (custom), maks 1000
+const parseLimit = (v) => Math.max(5, Math.min(MAX_LIMIT, Math.floor(Number(v)) || 20));
+const parseSeen = (v) => new Set(Array.isArray(v) ? v.slice(0, 5000).map(String) : []);
+// ID unik per kosakata (kanji+bacaan) -> dipakai melacak kanji yang sudah/belum pernah muncul
+const keyOf = (c) =>
+  createHash("md5").update(`${norm(c.kanji)}|${norm(c.furigana)}`).digest("hex").slice(0, 10);
+
 // Satu soal pilihan ganda (opsi diacak Fisher-Yates)
-function makeQuestion(card, allCards) {
+function makeQuestion(card, pool) {
   const seen = new Set([norm(card.furigana)]);
   const distractors = [];
-  for (const c of shuffle(allCards)) {
+  for (const c of shuffle(pool)) {
     const k = norm(c.furigana);
     if (c === card || seen.has(k)) continue;
     seen.add(k);
@@ -72,18 +79,38 @@ function makeQuestion(card, allCards) {
     if (distractors.length === 3) break;
   }
   const options = shuffle([{ text: card.furigana, isCorrect: true }, ...distractors]);
-  return { kanji: card.kanji, arti: card.arti, options };
+  return { key: card.key, kanji: card.kanji, arti: card.arti, options };
 }
 
-// Soal utama (urutan acak) + 3 soal cadangan untuk sudden death (diusahakan beda dari soal utama)
-function buildQuiz(allCards, limit) {
-  const deck = shuffle(allCards);
-  const main = deck.slice(0, limit);
-  const rest = deck.slice(limit);
-  const extra = (rest.length >= 3 ? rest : deck).slice(0, 3);
+// Pemilihan CERDAS: kanji yang belum pernah muncul (seen) SELALU didahulukan.
+// Kanji lama hanya dipakai untuk mengisi sisa kuota. Jika semua kanji sudah pernah muncul -> siklus baru.
+function buildQuiz(allCards, limit, seen = new Set()) {
+  const map = new Map();
+  for (const c of allCards) {
+    const k = keyOf(c);
+    if (!map.has(k)) map.set(k, { ...c, key: k });
+  }
+  const uniq = [...map.values()];
+
+  let unseen = uniq.filter((c) => !seen.has(c.key));
+  let cycleReset = false;
+  let old = uniq.filter((c) => seen.has(c.key));
+  if (!unseen.length) { unseen = uniq; old = []; cycleReset = true; }
+
+  const picked = shuffle([...shuffle(unseen), ...shuffle(old)].slice(0, limit));
+  const pickedKeys = new Set(picked.map((c) => c.key));
+  const rest = uniq.filter((c) => !pickedKeys.has(c.key));
+  const extra = shuffle(rest.length >= 3 ? rest : uniq).slice(0, 3);
+
   return {
-    questions: main.map((c) => makeQuestion(c, allCards)),
-    tiebreak: extra.map((c) => makeQuestion(c, allCards)),
+    questions: picked.map((c) => makeQuestion(c, uniq)),
+    tiebreak: extra.map((c) => makeQuestion(c, uniq)),
+    meta: {
+      keys: picked.map((c) => c.key),
+      cycleReset,
+      total: uniq.length,
+      remaining: unseen.length - Math.min(limit, unseen.length), // kanji yang BELUM muncul setelah game ini
+    },
   };
 }
 
@@ -104,50 +131,43 @@ app.get(
   }),
 );
 
-// --- GENERATE SOAL DARI DECK ---
-app.get(
-  "/api/battle/generate",
-  asyncRoute(async (req, res) => {
-    const limit = Math.max(5, Math.min(50, Number(req.query.limit) || 20));
-    const deckIds = [
-      ...new Set(
-        String(req.query.deckIds || "")
-          .split(",")
-          .map((x) => Number(x))
-          .filter((n) => Number.isSafeInteger(n) && n > 0),
-      ),
-    ].slice(0, 20);
+// --- GENERATE SOAL DARI DECK (GET lama tetap jalan, POST membawa daftar "seen") ---
+async function generateFromDecks(req, res, src) {
+  const limit = parseLimit(src.limit);
+  const rawIds = Array.isArray(src.deckIds) ? src.deckIds : String(src.deckIds || "").split(",");
+  const deckIds = [
+    ...new Set(rawIds.map((x) => Number(x)).filter((n) => Number.isSafeInteger(n) && n > 0)),
+  ].slice(0, 20);
 
-    if (!deckIds.length) {
-      return res.status(400).json({ error: "Pilih minimal 1 deck." });
-    }
+  if (!deckIds.length) return res.status(400).json({ error: "Pilih minimal 1 deck." });
 
-    const r = await pool.query(
-      `SELECT id, kanji, furigana, arti
-       FROM flashcards
-       WHERE archived = false AND deck_id = ANY($1::bigint[])`,
-      [deckIds.map(String)],
-    );
-    const allCards = r.rows;
+  const r = await pool.query(
+    `SELECT id, kanji, furigana, arti
+     FROM flashcards
+     WHERE archived = false AND deck_id = ANY($1::bigint[])`,
+    [deckIds.map(String)],
+  );
+  const allCards = r.rows;
 
-    const uniqueReadings = new Set(allCards.map((c) => norm(c.furigana)));
-    if (allCards.length < 4 || uniqueReadings.size < 4) {
-      return res.status(400).json({
-        error: "Deck terpilih minimal butuh 4 kosakata dengan cara baca berbeda.",
-      });
-    }
+  const uniqueReadings = new Set(allCards.map((c) => norm(c.furigana)));
+  if (allCards.length < 4 || uniqueReadings.size < 4) {
+    return res.status(400).json({
+      error: "Deck terpilih minimal butuh 4 kosakata dengan cara baca berbeda.",
+    });
+  }
 
-    const quiz = buildQuiz(allCards, limit);
-    res.json({ data: quiz.questions, tiebreak: quiz.tiebreak });
-  }),
-);
+  const quiz = buildQuiz(allCards, limit, parseSeen(src.seen));
+  res.json({ data: quiz.questions, tiebreak: quiz.tiebreak, meta: quiz.meta });
+}
+app.get("/api/battle/generate", asyncRoute((req, res) => generateFromDecks(req, res, req.query)));
+app.post("/api/battle/generate", asyncRoute((req, res) => generateFromDecks(req, res, req.body || {})));
 
 // --- GENERATE SOAL DARI DAFTAR KANJI CUSTOM (JSON) ---
-// Body: { limit: 20, cards: [{ kanji, furigana (atau carabaca), arti }] }
+// Body: { limit: 20, seen: [..], cards: [{ kanji, furigana (atau carabaca), arti }] }
 app.post(
   "/api/battle/generate-custom",
   asyncRoute(async (req, res) => {
-    const limit = Math.max(5, Math.min(50, Number(req.body.limit) || 20));
+    const limit = parseLimit(req.body.limit);
     const raw = req.body.cards;
 
     if (!Array.isArray(raw) || !raw.length) {
@@ -178,8 +198,8 @@ app.post(
       });
     }
 
-    const quiz = buildQuiz(cards, limit);
-    res.json({ data: quiz.questions, tiebreak: quiz.tiebreak });
+    const quiz = buildQuiz(cards, limit, parseSeen(req.body.seen));
+    res.json({ data: quiz.questions, tiebreak: quiz.tiebreak, meta: quiz.meta });
   }),
 );
 

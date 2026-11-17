@@ -100,6 +100,25 @@
     .chip2{display:flex;align-items:center;gap:5px;background:#1E293B;border-radius:9999px;padding:3px 9px 3px 3px;font-size:11px;font-weight:800;white-space:nowrap;border:1px solid transparent}
     .chip2.me{border-color:#FBBF24}.chip2.dead{opacity:.45}
     .chip2 img{width:22px;height:22px;border-radius:9999px;object-fit:cover}
+
+    .combo { position: relative; margin-top: 8px; padding: 5px 12px; border-radius: 9999px; font-size: 11px; font-weight: 900; letter-spacing: .06em; text-align: center;
+      background: linear-gradient(135deg,#F59E0B,#EF4444); color: #fff; box-shadow: 0 0 18px rgba(245,158,11,.5); animation: comboPulse .8s ease-in-out infinite; }
+    .combo.soft { background: #1E293B; color: #FBBF24; box-shadow: none; border: 1px solid #334155; animation: none; }
+    .combo.hot { background: linear-gradient(135deg,#7C3AED,#EF4444); box-shadow: 0 0 22px rgba(239,68,68,.6); }
+    @keyframes comboPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+    /* EFEK SERANGAN */
+    .fx { position: fixed; inset: 0; z-index: 65; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .fx.hidden { display: none; }
+    .fx-flash { position: absolute; inset: 0; animation: fxFlash .9s ease-out forwards; }
+    .fx.bolt .fx-flash { background: radial-gradient(circle, rgba(253,224,71,.85), rgba(147,197,253,.3) 60%, transparent); }
+    .fx.bomb .fx-flash { background: radial-gradient(circle, rgba(251,146,60,.9), rgba(239,68,68,.45) 60%, transparent); }
+    .fx.in .fx-flash { box-shadow: inset 0 0 120px 20px rgba(239,68,68,.7); }
+    .fx-icon { position: relative; font-size: 110px; line-height: 1; animation: fxPop 1.1s cubic-bezier(.2,1.4,.4,1) forwards; filter: drop-shadow(0 0 30px rgba(253,224,71,.9)); }
+    .fx.bomb .fx-icon { filter: drop-shadow(0 0 30px rgba(249,115,22,.95)); }
+    .fx-text { position: relative; margin-top: 8px; padding: 6px 14px; border-radius: 12px; background: rgba(0,0,0,.7); font-weight: 900; font-size: 14px; letter-spacing: .06em; text-align: center; }
+    @keyframes fxFlash { 0% { opacity: 0; } 10% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes fxPop { 0% { transform: translateY(-160px) scale(.4); opacity: 0; } 35% { transform: translateY(0) scale(1.25); opacity: 1; } 100% { transform: translateY(0) scale(1); opacity: 0; } }
+    .hist-scroll { -webkit-user-select: text; user-select: text; }
   </style>
 </head>
 <body>
@@ -128,6 +147,7 @@
     <button id="btnStats" class="btn-stats" aria-label="Statistik"><i class="fa-solid fa-ranking-star"></i></button>
     <div class="pill" id="pillText">Pilih Cara Baca</div>
     <div id="kanjiDisplay" class="kanji jp">&nbsp;</div>
+    <div id="comboBadge" class="combo hidden"></div>
     <div id="qCount" class="qcount"></div>
     <button id="btnEnd" class="hidden relative mt-3 px-4 py-2 rounded-xl bg-slate-800 text-amber-300 text-xs font-black uppercase tracking-wider">Akhiri Game Sekarang</button>
   </main>
@@ -156,10 +176,14 @@
       <p class="text-sm font-bold text-amber-300 mb-6" id="winReason"></p>
       <div id="finalBoard" class="text-left mb-3" style="max-height:34vh;overflow-y:auto"></div>
       <button id="btnStatsOver" class="btn-big btn-dark mb-3" style="font-size: 16px"><i class="fa-solid fa-ranking-star mr-2"></i>RIWAYAT & STATISTIK</button>
+      <button id="btnCopyOver" class="btn-big btn-dark mb-3 hidden" style="font-size: 16px"><i class="fa-solid fa-copy mr-2"></i>SALIN DAFTAR KANJI</button>
       <button onclick="window.location.href='/'" class="btn-big btn-white mb-3">PLAY AGAIN</button>
       <button id="btnLobby" class="btn-big btn-dark" style="font-size: 16px">BACK TO LOBBY</button>
     </div>
   </div>
+
+  <!-- EFEK SERANGAN -->
+  <div id="fx" class="fx hidden"><div class="fx-flash"></div><div id="fxIcon" class="fx-icon"></div><div id="fxText" class="fx-text"></div></div>
 
   <!-- TOAST -->
   <div id="toast" class="toast hidden">
@@ -175,6 +199,14 @@
       <div class="sheet-head"><span><i class="fa-solid fa-ranking-star text-yellow-400 mr-2"></i>STATISTIK</span>
         <button id="btnCloseStats" class="text-2xl text-slate-400 px-2" aria-label="Tutup">&times;</button></div>
       <div id="lbList"></div>
+      <div id="copyBar" class="hidden" style="margin-top:6px">
+        <div class="text-[11px] font-bold text-slate-400 mb-1"><i class="fa-solid fa-copy mr-1"></i>Salin riwayat kanji (untuk catatan pribadi)</div>
+        <div class="flex gap-2">
+          <button id="btnCopyText" type="button" class="tab">Semua</button>
+          <button id="btnCopyWrong" type="button" class="tab">Yang Salah</button>
+          <button id="btnCopyJson" type="button" class="tab">JSON</button>
+        </div>
+      </div>
       <div class="tabs"><button class="tab active" data-who="me">Riwayat Saya</button></div>
       <div id="histList" class="hist-scroll"></div>
     </div>
@@ -206,6 +238,7 @@
   if (!roomId) window.location.href = "/";
 
   let currentUser = null, isHost = false, questions = [], shownIndex = -1;
+  let streak = 0, streakInit = false, hitSeen = null, fxTimer;
   let timerInterval, timeLeft = 15, isProcessing = false, gameOverShown = false, doneSent = false, finishing = false, lastData = null;
 
   // ===== Helpers =====
@@ -250,6 +283,7 @@
   }
   function renderStats() {
     if (!lastData) return;
+    $("copyBar").classList.toggle("hidden", !isCustom());
     const list = ranked(lastData);
     $("lbList").innerHTML = boardHTML(list);
     const mine = hist(lastData.players[currentUser.uid]).reverse();
@@ -300,6 +334,80 @@
   }
   window.addEventListener("pointerdown", unlockAudio, { once: true });
 
+  // ===== Combo, serangan, salin riwayat =====
+  const multOf = (s) => (s >= 5 ? 3 : s >= 3 ? 2 : 1);   // streak 3-4 = x2, streak 5+ = x3
+  const isCustom = () => !!(lastData && lastData.settings && lastData.settings.mode === "custom");
+
+  function renderCombo() {
+    const el = $("comboBadge");
+    if (streak >= 3) {
+      el.textContent = `🔥 COMBO ${streak} • EXP ×${multOf(streak)} • ${streak >= 5 ? "💣 BOM" : "⚡ PETIR"} aktif`;
+      el.className = "combo" + (streak >= 5 ? " hot" : "");
+    } else if (streak === 2) {
+      el.textContent = "⚡ 1 benar lagi = COMBO ×2 + PETIR!";
+      el.className = "combo soft";
+    } else el.className = "combo hidden";
+  }
+
+  function pickTarget() {
+    const c = plist(lastData).filter((p) => p.uid !== currentUser.uid && (p.hp || 0) > 0 && !p.done && (p.exp || 0) > 0);
+    if (!c.length) return null;
+    c.sort((a, b) => (b.exp || 0) - (a.exp || 0));   // lawan dengan EXP tertinggi jadi sasaran
+    return c[0];
+  }
+
+  let actx;
+  function sfxBoom(bomb) {
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      const len = Math.floor(actx.sampleRate * (bomb ? 0.7 : 0.35)), buf = actx.createBuffer(1, len, actx.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2);
+      const s = actx.createBufferSource(), f = actx.createBiquadFilter(), g = actx.createGain();
+      s.buffer = buf; f.type = bomb ? "lowpass" : "highpass"; f.frequency.value = bomb ? 400 : 1500; g.gain.value = 0.6;
+      s.connect(f); f.connect(g); g.connect(actx.destination); s.start();
+    } catch (e) {}
+  }
+
+  function showFx(type, dir, name, dmg) {
+    const fx = $("fx"), bomb = type === "bomb", label = bomb ? "BOM" : "PETIR";
+    fx.classList.add("hidden"); void fx.offsetWidth;
+    fx.className = `fx ${bomb ? "bomb" : "bolt"} ${dir}`;
+    $("fxIcon").textContent = bomb ? "💣" : "⚡";
+    $("fxText").textContent = dir === "in" ? `${label} dari ${name}! −${dmg} EXP` : `${label} ke ${name}! −${dmg} EXP`;
+    if (dir === "in") shake();
+    sfxBoom(bomb);
+    clearTimeout(fxTimer);
+    fxTimer = setTimeout(() => fx.classList.add("hidden"), 1500);
+  }
+
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; }
+    catch (e) {
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.style.cssText = "position:fixed;opacity:0;top:0;left:0;-webkit-user-select:text;user-select:text";
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      let ok = false; try { ok = document.execCommand("copy"); } catch (_) {}
+      ta.remove(); return ok;
+    }
+  }
+  async function copyHist(kind, btn) {
+    const all = lastData ? hist(lastData.players[currentUser.uid]) : [];
+    const items = kind === "wrong" ? all.filter((h) => !h.ok) : all;
+    const old = btn.innerHTML;
+    let text;
+    if (!items.length) { btn.textContent = kind === "wrong" ? "Tidak ada yg salah" : "Belum ada riwayat"; setTimeout(() => (btn.innerHTML = old), 1500); return; }
+    if (kind === "json") text = JSON.stringify(items.map((h) => ({ kanji: h.kanji, furigana: h.furigana, arti: h.arti })), null, 2);
+    else text = `Kanji Battle — Riwayat (${kind === "wrong" ? "yang salah" : "semua"}) • Room ${roomId}\n` +
+      items.map((h, n) => `${n + 1}. ${h.kanji} | ${h.furigana} | ${h.arti}${kind === "wrong" ? "" : h.ok ? " ✓" : " ✗"}`).join("\n");
+    const ok = await copyText(text);
+    btn.textContent = ok ? `✓ Tersalin (${items.length})` : "Gagal menyalin";
+    setTimeout(() => (btn.innerHTML = old), 1800);
+  }
+  $("btnCopyText").onclick = (e) => copyHist("all", e.currentTarget);
+  $("btnCopyWrong").onclick = (e) => copyHist("wrong", e.currentTarget);
+  $("btnCopyJson").onclick = (e) => copyHist("json", e.currentTarget);
+  $("btnCopyOver").onclick = (e) => copyHist("all", e.currentTarget);
+
   $("btnLobby").onclick = () => { window.location.href = `/room?id=${roomId}`; };
 
   // Hanya host yang memulai
@@ -332,6 +440,11 @@
       isHost = data.host.uid === currentUser.uid;
       questions = data.questions ? Object.values(data.questions) : [];
       lastData = data;
+      if (!streakInit) { streakInit = true; streak = me.streak || 0; hitSeen = (me.hit && me.hit.at) || 0; }
+      else if (me.hit && me.hit.at !== hitSeen) {
+        hitSeen = me.hit.at;
+        if (data.status !== "finished") showFx(me.hit.type, "in", me.hit.from, me.hit.dmg);
+      }
 
       const list = ranked(data);
       renderMe(me, list.findIndex((p) => p.uid === currentUser.uid) + 1, list.length);
@@ -396,6 +509,7 @@
     renderQuestion(questions[index], selectAnswer);
     $("pillText").textContent = "Pilih Cara Baca";
     $("qCount").textContent = `Soal ${index + 1} / ${questions.length}`;
+    renderCombo();
     resetTimer();
   }
 
@@ -429,10 +543,12 @@
     buttons.forEach((b) => (b.disabled = true));
     const ci = optsOf(q).findIndex((o) => o.isCorrect);
     if (buttons[ci]) buttons[ci].classList.add("btn-correct");
+    streak = 0; renderCombo();
     showToast(q, "time");
     const base = `rooms/${roomId}/players/${currentUser.uid}`;
     const updates = {
       [`${base}/hp`]: increment(-1),
+      [`${base}/streak`]: 0,
       [`${base}/qIndex`]: increment(1),
       [`${base}/history/${idx}`]: { kanji: q.kanji, furigana: correctText(q), arti: q.arti, picked: null, ok: false, timeout: true },
     };
@@ -447,23 +563,40 @@
     const buttons = document.querySelectorAll(".btn-option");
     buttons.forEach((b) => (b.disabled = true));
     const base = `rooms/${roomId}/players/${currentUser.uid}`;
-    const updates = {};
+    const updates = {}; let gain = 0, mult = 1;
     updates[`${base}/qIndex`] = increment(1);
     updates[`${base}/history/${idx}`] = { kanji: q.kanji, furigana: correctText(q), arti: q.arti, picked: o[index].text, ok: isCorrect, timeout: false };
     if (isCorrect) {
       play(sfxCorrect);
       buttons[index].classList.add("btn-correct");
-      updates[`${base}/exp`] = increment(20 + Math.max(0, timeLeft)); // bonus kecepatan ala Quizizz
+      // Combo: bonus dasar + kecepatan dikali 2x (streak 3-4) atau 3x (streak 5+)
+      mult = multOf(streak + 1);
+      gain = Math.round((20 + Math.max(0, timeLeft)) * mult);
+      streak += 1;
+      updates[`${base}/exp`] = increment(gain);
+      updates[`${base}/streak`] = streak;
+      if (streak >= 3) {                       // serangan ke lawan: petir (streak 3-4) / bom (streak 5+)
+        const bomb = streak >= 5, t = pickTarget();
+        if (t) {
+          const dmg = Math.min(bomb ? 30 : 15, t.exp || 0);
+          updates[`rooms/${roomId}/players/${t.uid}/exp`] = increment(-dmg);
+          updates[`rooms/${roomId}/players/${t.uid}/hit`] = { type: bomb ? "bomb" : "bolt", from: currentUser.displayName || "Lawan", dmg, at: Date.now() };
+          showFx(bomb ? "bomb" : "bolt", "out", t.name || "Lawan", dmg);
+        }
+      }
+      renderCombo();
     } else {
       play(sfxWrong);
       buttons[index].classList.add("btn-wrong");
       updates[`${base}/hp`] = increment(-1);
       updates[`${base}/exp`] = increment(-5);
+      streak = 0; updates[`${base}/streak`] = 0; renderCombo();
       shake();
       const ci = o.findIndex((x) => x.isCorrect);
       if (buttons[ci]) buttons[ci].classList.add("btn-correct");
     }
     showToast(q, isCorrect ? "ok" : "bad", o[index].text);
+    if (isCorrect) $("toastTitle").textContent = `✓ Benar! +${gain} EXP${mult > 1 ? ` (×${mult})` : ""}`;
     setTimeout(() => update(ref(db), updates), isCorrect ? OK_DELAY : WRONG_DELAY);
   }
 
@@ -480,6 +613,7 @@
     $("expResult").textContent = `Total EXP: ${me.exp || 0}`;
     $("winReason").textContent = `Peringkat ${rank} dari ${list.length} pemain`;
     $("finalBoard").innerHTML = boardHTML(list);
+    $("btnCopyOver").classList.toggle("hidden", !isCustom());
     const title = $("winnerText");
     if (rank === 1) { title.textContent = "JUARA 1! 🏆"; title.classList.add("text-yellow-400"); }
     else { title.textContent = `PERINGKAT ${MEDAL[rank - 1] || "#" + rank}`; title.classList.add("text-slate-200"); }
