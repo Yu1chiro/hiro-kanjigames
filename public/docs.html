@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0F172A">
+  <title>Panduan | Kanji Battle</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Noto+Sans+JP:wght@700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0F172A; --card: #1E293B; --card2: #0B1220; --line: #334155;
+      --text: #F8FAFC; --mute: #94A3B8; --red: #EF4444; --blue: #3B82F6;
+      --green: #10B981; --gold: #FBBF24; --purple: #A855F7; --cyan: #38BDF8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; scroll-padding-top: 64px; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; -webkit-tap-highlight-color: transparent;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+    .jp { font-family: 'Noto Sans JP', sans-serif; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px 56px; }
+
+    /* HERO */
+    .hero { padding: 36px 0 20px; text-align: center; position: relative; }
+    .hero::before, .hero::after { content: ""; position: absolute; width: 220px; height: 220px; border-radius: 50%; filter: blur(80px); z-index: -1; }
+    .hero::before { background: rgba(239,68,68,.22); left: -40px; top: 0; }
+    .hero::after { background: rgba(59,130,246,.22); right: -40px; top: 40px; }
+    .kanji-mark { font-size: 56px; font-weight: 900; line-height: 1; letter-spacing: .05em; background: linear-gradient(135deg, #F87171, #60A5FA); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    h1 { font-size: clamp(28px, 8vw, 40px); font-weight: 900; text-transform: uppercase; letter-spacing: -.01em; margin-top: 6px; }
+    .sub { color: var(--mute); font-size: 14px; max-width: 460px; margin: 8px auto 0; }
+    .cta { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 22px; margin-top: 18px; border-radius: 16px; font-weight: 900; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; text-decoration: none; color: #fff; background: linear-gradient(135deg, var(--red), #B91C1C); box-shadow: 0 8px 24px rgba(239,68,68,.35); }
+
+    /* NAV */
+    nav { position: sticky; top: 0; z-index: 10; margin: 0 -16px 18px; padding: 8px 16px; background: rgba(15,23,42,.92); backdrop-filter: blur(10px); border-bottom: 1px solid #1E293B; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+    nav::-webkit-scrollbar { display: none; }
+    nav a { flex: 0 0 auto; padding: 7px 13px; border-radius: 9999px; background: var(--card); border: 1px solid var(--line); color: var(--mute); font-size: 12px; font-weight: 800; text-decoration: none; white-space: nowrap; }
+    nav a:active { background: #fff; color: var(--bg); }
+
+    /* SECTION */
+    section { margin-bottom: 26px; }
+    .sec-h { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .sec-n { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; background: var(--card); border: 1px solid var(--line); color: var(--gold); }
+    h2 { font-size: clamp(18px, 5vw, 22px); font-weight: 900; }
+    p { color: #CBD5E1; font-size: 14px; }
+    p + p, p + .card, .card + .card, .card + p, ul + p { margin-top: 10px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 14px 16px; }
+    .card h3 { font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .ico { font-size: 20px; line-height: 1; }
+    ul { list-style: none; }
+    li { position: relative; padding-left: 18px; color: #CBD5E1; font-size: 14px; margin-top: 6px; }
+    li::before { content: ""; position: absolute; left: 3px; top: 10px; width: 6px; height: 6px; border-radius: 50%; background: var(--blue); }
+    b, strong { color: #fff; font-weight: 800; }
+    code { font-family: ui-monospace, Menlo, Consolas, 'Noto Sans JP', monospace; font-size: 12px; background: var(--card2); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; color: #FDE68A; }
+    pre { margin-top: 10px; background: var(--card2); border: 1px solid var(--line); border-radius: 14px; padding: 12px; overflow-x: auto; font-size: 11.5px; line-height: 1.55; color: #E2E8F0; font-family: ui-monospace, Menlo, Consolas, 'Noto Sans JP', monospace; }
+
+    /* STEPS */
+    .steps { counter-reset: s; display: grid; gap: 10px; }
+    .step { counter-increment: s; display: flex; gap: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 14px; }
+    .step::before { content: counter(s); flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; background: linear-gradient(135deg, var(--red), var(--blue)); }
+    .step p { margin: 0; }
+    .step strong { display: block; margin-bottom: 2px; }
+
+    /* GRID */
+    .grid2 { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }
+    @media (min-width: 520px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+    .item { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 14px; }
+    .item .top { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .item .big { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; background: var(--card2); border: 1px solid var(--line); }
+    .item h3 { font-size: 15px; font-weight: 800; }
+    .item .tag { font-size: 11px; font-weight: 800; color: var(--gold); }
+    .item p { font-size: 13px; }
+
+    /* TABLE */
+    .tbl { margin-top: 10px; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+    .tr { display: grid; grid-template-columns: 1.1fr 1fr 1.3fr; gap: 8px; padding: 10px 12px; font-size: 12.5px; background: var(--card); border-top: 1px solid var(--line); }
+    .tr:first-child { border-top: 0; }
+    .tr.h { background: var(--card2); color: var(--mute); font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+    .tr span:first-child { font-weight: 800; color: #fff; }
+
+    .badge { display: inline-block; padding: 2px 9px; border-radius: 9999px; font-size: 11px; font-weight: 900; letter-spacing: .04em; vertical-align: middle; }
+    .b-green { background: rgba(16,185,129,.15); color: #34D399; } .b-red { background: rgba(239,68,68,.15); color: #F87171; }
+    .b-gold { background: rgba(251,191,36,.15); color: var(--gold); } .b-blue { background: rgba(59,130,246,.15); color: #60A5FA; }
+
+    .note { margin-top: 10px; display: flex; gap: 10px; padding: 12px 14px; border-radius: 16px; background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.3); font-size: 13px; color: #FDE68A; }
+    .note.info { background: rgba(59,130,246,.08); border-color: rgba(59,130,246,.3); color: #BFDBFE; }
+
+    /* MOCK UI */
+    .mock { margin-top: 10px; background: var(--card2); border: 1px solid var(--line); border-radius: 18px; padding: 12px; display: grid; gap: 8px; justify-items: start; }
+    .m-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 9999px; font-size: 12px; font-weight: 800; background: linear-gradient(135deg,#F59E0B,#EF4444); color: #fff; }
+    .m-pill.soft { background: var(--card); border: 1px solid var(--line); color: var(--gold); }
+    .m-pill.hot { background: linear-gradient(135deg,#7C3AED,#EF4444); }
+    .m-toast { padding: 6px 10px; border-radius: 12px; background: rgba(15,23,42,.93); border: 1px solid #475569; font-size: 11px; font-weight: 800; }
+    .m-toast.gold { border-color: var(--gold); color: #FDE68A; } .m-toast.red { border-color: var(--red); color: #FCA5A5; }
+    .m-heart { color: var(--red); letter-spacing: 2px; }
+    .m-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .m-it { display: inline-flex; align-items: center; gap: 4px; background: var(--card); border: 1px solid #475569; border-radius: 12px; padding: 4px 9px; font-size: 12px; font-weight: 800; }
+    .m-it b { color: var(--gold); }
+
+    /* FAQ */
+    details { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 0 14px; margin-top: 8px; }
+    summary { cursor: pointer; padding: 13px 0; font-weight: 800; font-size: 14px; list-style: none; display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: "+"; color: var(--gold); font-size: 20px; font-weight: 900; line-height: 1; }
+    details[open] summary::after { content: "–"; }
+    details p { padding-bottom: 13px; }
+
+    footer { text-align: center; color: #64748B; font-size: 12px; padding-top: 8px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="kanji-mark jp">漢字</div>
+    <h1>Panduan Kanji Battle</h1>
+    <p class="sub">Duel kuis kanji real-time bareng teman. Jawab cepat, bangun combo, serang lawan, dan jadi juara.</p>
+    <a class="cta" href="/">Mulai Main</a>
+  </header>
+
+  <nav aria-label="Navigasi panduan">
+    <a href="#mulai">Mulai</a>
+    <a href="#lobby">Lobby</a>
+    <a href="#aturan">Aturan</a>
+    <a href="#combo">Combo</a>
+    <a href="#item">Item</a>
+    <a href="#special">Final &amp; Boss</a>
+    <a href="#sosial">Reaksi</a>
+    <a href="#akhir">Hasil</a>
+    <a href="#faq">FAQ</a>
+  </nav>
+
+  <!-- 1 -->
+  <section id="mulai">
+    <div class="sec-h"><div class="sec-n">1</div><h2>Cara Mulai</h2></div>
+    <div class="steps">
+      <div class="step"><div><strong>Login dengan Google</strong><p>Buka halaman utama lalu tekan <b>Login with Google</b>. Nama dan foto akunmu dipakai sebagai identitas di arena.</p></div></div>
+      <div class="step"><div><strong>Buat room atau gabung</strong><p>Tekan <b>Create Room</b> untuk jadi host. Kode room berupa <b>5 angka</b>, misalnya <code>23310</code>. Teman bergabung dengan mengetik kode itu lalu menekan tombol masuk.</p></div></div>
+      <div class="step"><div><strong>Tunggu di lobby</strong><p>Room menampung maksimal <b>8 pemain</b>. Game bisa dimulai setelah minimal <b>2 pemain</b> ada di lobby.</p></div></div>
+      <div class="step"><div><strong>Host mulai, semua bertarung</strong><p>Host memilih sumber soal lalu menekan <b>Start Battle!</b>. Di arena, host menekan <b>FIGHT!</b> dan pertarungan dimulai untuk semua.</p></div></div>
+    </div>
+    <div class="note info"><span>💡</span><span>Pernah keluar di tengah jalan? Masukkan kode room yang sama lagi, kamu akan dikembalikan ke room atau arena yang sedang berjalan.</span></div>
+  </section>
+
+  <!-- 2 -->
+  <section id="lobby">
+    <div class="sec-h"><div class="sec-n">2</div><h2>Lobby</h2></div>
+    <p>Di lobby kamu melihat kode room, daftar pemain (host ditandai merah), dan pengaturan soal dari host.</p>
+
+    <div class="card">
+      <h3><span class="ico">👑</span> Pengaturan khusus host</h3>
+      <ul>
+        <li><b>Pilih Deck</b>: pilih satu atau beberapa deck kosakata. Jumlah kosakata tiap deck ditampilkan.</li>
+        <li><b>Custom JSON</b>: tempel daftar kanji sendiri. Tekan <b>Isi contoh</b> untuk melihat formatnya. Status di bawah kolom memberi tahu apakah JSON sudah valid.</li>
+        <li><b>Jumlah Soal</b>: pilih 10, 20, 30, 50, atau <b>Semua</b>, atau ketik angka sendiri (5 sampai 1000), misalnya 100 atau 200.</li>
+        <li>Teks kecil di kanan judul menampilkan jumlah kanji yang tersedia dan berapa yang <b>belum pernah muncul</b>.</li>
+      </ul>
+      <pre class="jp">[
+  {"kanji":"学校","furigana":"がっこう","arti":"sekolah"},
+  {"kanji":"先生","furigana":"せんせい","arti":"guru"}
+]</pre>
+      <p>Minimal 4 kosakata dengan cara baca berbeda, maksimal 500 kosakata untuk custom.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="ico">🎮</span> Untuk pemain biasa</h3>
+      <p>Kamu hanya bisa melihat sumber soal dan jumlah soal yang dipilih host. Tombol di bawah akan menunggu sampai host memulai.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="ico">🧠</span> Kanji yang belum muncul didahulukan</h3>
+      <p>Sistem mengingat kanji yang sudah keluar di room ini. Game berikutnya memprioritaskan kanji yang <b>belum pernah muncul</b>, dan kanji lama hanya dipakai kalau kuota belum terpenuhi. Kalau semua kanji sudah pernah muncul, siklus dimulai dari awal.</p>
+    </div>
+
+    <div class="grid2">
+      <div class="item"><div class="top"><div class="big">🎵</div><h3>Musik lobby</h3></div><p>Tombol speaker di kanan atas menyalakan atau mematikan musik latar. Pilihanmu diingat di perangkat.</p></div>
+      <div class="item"><div class="top"><div class="big">🚪</div><h3>Logout</h3></div><p>Tombol merah di kiri atas keluar dari room dan logout. Kalau host keluar, peran host pindah ke pemain lain.</p></div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="aturan">
+    <div class="sec-h"><div class="sec-n">3</div><h2>Aturan Dasar Pertandingan</h2></div>
+    <p>Setiap soal menampilkan sebuah kanji. Pilih <b>cara baca (furigana)</b> yang benar dari 4 pilihan sebelum timer habis.</p>
+
+    <div class="tbl">
+      <div class="tr h"><span>Kejadian</span><span>Nyawa (HP)</span><span>EXP</span></div>
+      <div class="tr"><span>Jawab benar</span><span>tetap</span><span>+(20 + sisa detik) × pengali</span></div>
+      <div class="tr"><span>Jawab salah</span><span>−1 ❤</span><span>−5</span></div>
+      <div class="tr"><span>Waktu habis</span><span>−1 ❤</span><span>tidak berubah</span></div>
+    </div>
+
+    <div class="grid2">
+      <div class="item"><div class="top"><div class="big">⏱️</div><h3>Timer 15 detik</h3></div><p>Makin cepat menjawab, makin besar bonus EXP. Soal Boss hanya 10 detik.</p></div>
+      <div class="item"><div class="top"><div class="big">❤️</div><h3>5 nyawa</h3></div><p>Semua pemain mulai dengan 5 ❤. Kalau nyawa habis, kamu berhenti main (💀) dan menunggu pemain lain.</p></div>
+    </div>
+
+    <div class="card">
+      <h3><span class="ico">🏆</span> Cara penentuan peringkat</h3>
+      <ul>
+        <li>EXP tertinggi di atas.</li>
+        <li>Kalau EXP sama, yang HP-nya lebih banyak menang.</li>
+        <li>Kalau masih sama, yang selesai lebih dulu menang.</li>
+      </ul>
+      <p>Game berakhir saat semua pemain selesai atau kehabisan nyawa. Host juga bisa menekan <b>Akhiri Game Sekarang</b> kalau ada pemain yang terputus.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="ico">📊</span> Layar arena</h3>
+      <ul>
+        <li><b>Header</b>: fotomu, nyawa, EXP, dan badge 🏆 peringkat. Tekan badge itu untuk membuka statistik.</li>
+        <li><b>Strip di bawah header</b>: peringkat, EXP, dan status semua pemain secara langsung.</li>
+        <li><b>Toast kiri atas</b>: pengumuman permainan seperti pergantian juara, serangan, dan item.</li>
+        <li><b>Toast kanan atas</b>: hasil jawabanmu (benar atau salah) beserta bacaan yang tepat.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3><span class="ico">🔁</span> Soal yang salah muncul lagi</h3>
+      <p>Kanji yang kamu jawab salah atau terlewat waktu akan muncul lagi <b>3 soal kemudian</b> dengan urutan pilihan diacak dan label <b>🔁 Ulangan</b>. Setiap soal hanya diulang satu kali. Soal ulangan menambah total soalmu.</p>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section id="combo">
+    <div class="sec-h"><div class="sec-n">4</div><h2>Combo &amp; Serangan</h2></div>
+    <p>Jawab benar berturut-turut untuk membangun <b>streak</b>. Salah atau waktu habis akan mereset streak ke 0.</p>
+
+    <div class="mock">
+      <span class="m-pill soft">⚡ 1 benar lagi = COMBO ×2 + PETIR!</span>
+      <span class="m-pill">🔥 COMBO 3 • EXP ×2 • ⚡ PETIR aktif</span>
+      <span class="m-pill hot">🔥 COMBO 5 • EXP ×3 • 💣 BOM aktif</span>
+    </div>
+
+    <div class="grid2">
+      <div class="item"><div class="top"><div class="big">⚡</div><div><h3>Petir</h3><div class="tag">Streak 3–4 • EXP ×2</div></div></div><p>Setiap jawaban benar menyambar lawan dengan EXP tertinggi: <b>−5 EXP</b>.</p></div>
+      <div class="item"><div class="top"><div class="big">💣</div><div><h3>Bom</h3><div class="tag">Streak 5+ • EXP ×3</div></div></div><p>Ledakan ke lawan dengan EXP tertinggi: <b>−15 EXP</b>.</p></div>
+    </div>
+
+    <div class="note info"><span>ℹ️</span><span>Serangan <b>hanya mengurangi EXP</b>, tidak mengurangi nyawa. EXP korban tidak akan turun di bawah 0 karena serangan, dan pemain yang sudah selesai atau tumbang tidak dijadikan sasaran.</span></div>
+    <div class="note"><span>⚠️</span><span>Pengali EXP dijumlahkan dengan bonus Final dan Boss, bukan dikalikan. Contoh: combo ×3 di Ronde Final menjadi ×4.</span></div>
+  </section>
+
+  <!-- 5 -->
+  <section id="item">
+    <div class="sec-h"><div class="sec-n">5</div><h2>Item Power-up</h2></div>
+    <p>Item ada di baris tepat di atas bar timer. Tekan ikonnya kapan saja untuk memakainya. Angka kuning adalah jumlah item yang kamu punya, dan ikon yang redup berarti belum punya.</p>
+
+    <div class="mock">
+      <div class="m-row"><span class="m-it">🛡️ <b>1</b></span><span class="m-it">🔀 <b>0</b></span><span class="m-it">❄️ <b>2</b></span><span class="m-it">💊 <b>1</b></span></div>
+    </div>
+
+    <div class="grid2">
+      <div class="item"><div class="top"><div class="big">🛡️</div><h3>Perisai</h3></div><p>Kebal terhadap <b>1 serangan</b> apa pun (petir, bom, acak, atau beku). Jumlah perisai aktif tampil di samping EXP-mu.</p></div>
+      <div class="item"><div class="top"><div class="big">🔀</div><h3>Acak</h3></div><p>Mengacak posisi pilihan jawaban lawan dengan EXP tertinggi saat ia sedang berpikir.</p></div>
+      <div class="item"><div class="top"><div class="big">❄️</div><h3>Beku</h3></div><p>Lawan dengan EXP tertinggi <b>tidak bisa menekan jawaban selama 3 detik</b>, sementara timernya tetap berjalan.</p></div>
+      <div class="item"><div class="top"><div class="big">💊</div><h3>Heal</h3></div><p>Menambah <b>+1 nyawa</b> (maksimal 5) dan <b>+25 EXP</b>. Bisa dipakai kapan saja.</p></div>
+    </div>
+
+    <div class="card">
+      <h3><span class="ico">🎁</span> Cara mendapat item</h3>
+      <ul>
+        <li>Saat streak mencapai <b>3</b> dan setiap kelipatan <b>5</b> (5, 10, 15, dan seterusnya).</li>
+        <li>Peluang <b>20%</b> setiap menjawab benar dengan cepat (di 20% waktu pertama).</li>
+        <li>Item yang didapat acak. Batas simpanan: maksimal <b>2 per jenis</b> dan <b>4 total</b>.</li>
+      </ul>
+    </div>
+    <div class="note info"><span>🧭</span><span>Strategi: simpan perisai kalau kamu sedang memimpin, pakai beku dan acak saat lawan hampir menyalip, dan heal saat nyawa tinggal 1.</span></div>
+  </section>
+
+  <!-- 6 -->
+  <section id="special">
+    <div class="sec-h"><div class="sec-n">6</div><h2>Ronde Final &amp; Soal Boss</h2></div>
+
+    <div class="grid2">
+      <div class="item"><div class="top"><div class="big">🔥</div><div><h3>Final Round</h3><div class="tag">EXP bonus ×2</div></div></div>
+        <p><b>5 soal terakhir</b> (atau 2 soal terakhir kalau total soal 6–9) bernilai lebih besar. Pemain di peringkat bawah masih punya peluang menyalip.</p></div>
+      <div class="item"><div class="top"><div class="big">👹</div><div><h3>Soal Boss</h3><div class="tag">Timer 10 detik • EXP ×3</div></div></div>
+        <p>Setiap soal <b>kelipatan 10</b> (soal 10, 20, 30, dan seterusnya) adalah boss: timer lebih singkat, hadiah EXP besar.</p></div>
+    </div>
+
+    <div class="card">
+      <h3><span class="ico">🧮</span> Rumus EXP jawaban benar</h3>
+      <p><b>(20 + sisa detik) × (combo + final + boss)</b></p>
+      <ul>
+        <li>Combo: ×1 (biasa), ×2 (streak 3–4), ×3 (streak 5+).</li>
+        <li>Final: tambah +1 (soal Final Round).</li>
+        <li>Boss: tambah +2 (soal Boss).</li>
+      </ul>
+      <p>Contoh: sisa 10 detik, streak 5, di soal Final: (20 + 10) × (3 + 1) = <b>120 EXP</b>.</p>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section id="sosial">
+    <div class="sec-h"><div class="sec-n">7</div><h2>Reaksi Emoji</h2></div>
+    <p>Di sebelah kanan baris item ada empat tombol emoji: 😂 🔥 😭 👏. Reaksi tidak mempengaruhi skor.</p>
+    <div class="grid2">
+      <div class="item"><div class="top"><div class="big">👆</div><h3>Ketuk</h3></div><p>Beberapa emoji melayang naik dari tombol.</p></div>
+      <div class="item"><div class="top"><div class="big">✋</div><h3>Tahan</h3></div><p>Tahan tombol untuk banjir emoji terus-menerus seperti reaksi live di Instagram.</p></div>
+    </div>
+    <p>Semua pemain di room melihat emoji yang sama beserta nama pengirimnya.</p>
+  </section>
+
+  <!-- 8 -->
+  <section id="akhir">
+    <div class="sec-h"><div class="sec-n">8</div><h2>Hasil, Riwayat &amp; Rematch</h2></div>
+
+    <div class="card">
+      <h3><span class="ico">📈</span> Statistik &amp; riwayat</h3>
+      <ul>
+        <li>Tekan badge 🏆 di header (atau tombol <b>Riwayat &amp; Statistik</b> di layar akhir) untuk melihat papan peringkat dengan jumlah benar ✓, salah ✗, dan sisa ❤.</li>
+        <li>Tab <b>Riwayat Saya</b> memuat setiap kanji yang sudah kamu jawab beserta bacaan, arti, dan jawabanmu kalau salah.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3><span class="ico">📋</span> Salin daftar kanji <span class="badge b-blue">Mode Custom</span></h3>
+      <p>Kalau host memakai <b>Custom JSON</b>, riwayatmu bisa disalin untuk disimpan di catatan pribadi:</p>
+      <ul>
+        <li><b>Semua</b>: seluruh riwayat dalam bentuk daftar teks bernomor.</li>
+        <li><b>Yang Salah</b>: hanya kanji yang kamu jawab salah, cocok untuk bahan belajar.</li>
+        <li><b>JSON</b>: format yang bisa ditempel lagi sebagai daftar custom di lobby.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3><span class="ico">🔁</span> Rematch</h3>
+      <p>Di layar akhir, <b>host</b> bisa menekan <b>Main Lagi (Rematch)</b>. Soal baru dibuat dari sumber dan jumlah yang sama, memprioritaskan kanji yang belum pernah muncul, lalu game langsung mulai. Pemain lain otomatis ikut masuk.</p>
+      <ul>
+        <li><b>Back to Lobby</b>: kembali ke lobby untuk ganti deck atau jumlah soal.</li>
+        <li><b>Play Again</b>: kembali ke halaman utama.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section id="faq">
+    <div class="sec-h"><div class="sec-n">?</div><h2>Tanya Jawab</h2></div>
+    <details><summary>Kenapa tombol Start tidak aktif?</summary><p>Tombol aktif jika kamu host, sudah ada minimal 2 pemain, dan sumber soal valid (deck dipilih atau JSON custom benar).</p></details>
+    <details><summary>Siapa yang bisa memulai dan merematch?</summary><p>Hanya host. Pemain lain akan melihat pesan menunggu host.</p></details>
+    <details><summary>Apakah serangan mengurangi nyawa?</summary><p>Tidak. Petir dan bom hanya mengurangi EXP. Nyawa berkurang hanya karena jawaban salah atau waktu habis.</p></details>
+    <details><summary>Siapa yang jadi sasaran serangan?</summary><p>Lawan yang masih bermain dengan EXP tertinggi. Petir dan bom hanya memilih lawan dengan EXP di atas 0.</p></details>
+    <details><summary>Soal custom saya tidak diterima, kenapa?</summary><p>Cek bahwa JSON berbentuk array, setiap item punya <code>kanji</code>, <code>furigana</code>, dan <code>arti</code>, serta ada minimal 4 cara baca yang berbeda.</p></details>
+    <details><summary>Saya keluar atau koneksi putus, bagaimana?</summary><p>Buka halaman utama, masukkan kode room yang sama, dan kamu akan kembali ke room atau arena yang sedang berjalan.</p></details>
+    <details><summary>Bagaimana kalau pemain lain tidak kunjung selesai?</summary><p>Host dapat menekan <b>Akhiri Game Sekarang</b> di layar tunggu untuk menutup pertandingan berdasarkan peringkat saat itu.</p></details>
+  </section>
+
+  <footer>Kanji Battle • Selamat bertarung! 🔥</footer>
+</div>
+</body>
+</html>

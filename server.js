@@ -35,6 +35,7 @@ app.use(express.static(ROOT));
 
 // --- ROUTES VIEW ---
 app.get("/", (req, res) => res.sendFile(path.join(ROOT, "index.html")));
+app.get("/docs", (req, res) => res.sendFile(path.join(ROOT, "docs.html")));
 app.get("/backsound", (req, res) => res.sendFile(path.join(ROOT, "backsound.mp3")));
 app.get("/room", (req, res) => res.sendFile(path.join(ROOT, "room.html")));
 app.get("/game-mode", (req, res) =>
