@@ -170,6 +170,24 @@
     @keyframes fxFlash { 0% { opacity: 0; } 10% { opacity: 1; } 100% { opacity: 0; } }
     @keyframes fxPop { 0% { transform: translateY(-160px) scale(.4); opacity: 0; } 35% { transform: translateY(0) scale(1.25); opacity: 1; } 100% { transform: translateY(0) scale(1); opacity: 0; } }
     .hist-scroll { -webkit-user-select: text; user-select: text; }
+    /* ===== Revisi UI: toast sudut, baris aksi, reaksi ala Instagram ===== */
+    .btn-stats { display: none; }
+    #rankBadge { cursor: pointer; }
+    .actionrow { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 5px 10px; background: #0B1220; border-top: 1px solid #1E293B; flex-shrink: 0; }
+    .itembar { margin-top: 0; gap: 5px; }
+    .it { padding: 4px 8px; }
+    .reactbar { position: static; gap: 3px; }
+    .rbtn { width: 32px; height: 32px; font-size: 17px; touch-action: manipulation; -webkit-touch-callout: none; }
+    .react-float { position: fixed; bottom: auto; z-index: 66; pointer-events: none; display: flex; flex-direction: column; align-items: center; animation: rUp 2.4s ease-out forwards; }
+    .react-float span { font-size: 30px; }
+    @keyframes rUp { 0% { opacity: 0; transform: translate(0,0) scale(.4); } 12% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--sw),-340px) scale(var(--sc)); } }
+    #toasts { position: fixed; z-index: 68; left: 8px; top: calc(98px + env(safe-area-inset-top)); display: flex; flex-direction: column; gap: 6px; max-width: 44vw; pointer-events: none; }
+    .ann { padding: 6px 10px; border-radius: 12px; background: rgba(15,23,42,.93); border: 1px solid #475569; font-size: 11px; font-weight: 800; line-height: 1.25; animation: annSlide 2.8s ease-out forwards; }
+    .ann.gold { border-color: #FBBF24; color: #FDE68A; } .ann.red { border-color: #EF4444; color: #FCA5A5; }
+    @keyframes annSlide { 0% { opacity: 0; transform: translateX(-18px); } 8% { opacity: 1; transform: none; } 85% { opacity: 1; } 100% { opacity: 0; } }
+    .toast { left: auto; right: 8px; transform: none; width: min(54vw, 240px); top: calc(98px + env(safe-area-inset-top)); padding: 8px 10px; animation: toastIn2 .22s ease-out; }
+    .toast .t-kanji { font-size: 22px; }
+    @keyframes toastIn2 { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
   </style>
 </head>
 <body>
@@ -196,14 +214,19 @@
   <!-- KANJI -->
   <main class="arena" id="arenaMain">
     <button id="btnStats" class="btn-stats" aria-label="Statistik"><i class="fa-solid fa-ranking-star"></i></button>
-    <div class="reactbar"><button type="button" class="rbtn" data-e="😂">😂</button><button type="button" class="rbtn" data-e="🔥">🔥</button><button type="button" class="rbtn" data-e="😭">😭</button><button type="button" class="rbtn" data-e="👏">👏</button></div>
     <div class="pill" id="pillText">Pilih Cara Baca</div>
     <div id="kanjiDisplay" class="kanji jp">&nbsp;</div>
     <div id="comboBadge" class="combo hidden"></div>
     <div id="qCount" class="qcount"></div>
-    <div id="itemBar" class="itembar"></div>
     <button id="btnEnd" class="hidden relative mt-3 px-4 py-2 rounded-xl bg-slate-800 text-amber-300 text-xs font-black uppercase tracking-wider">Akhiri Game Sekarang</button>
   </main>
+
+  <div class="actionrow">
+    <div id="itemBar" class="itembar"></div>
+    <div id="reactBar" class="reactbar">
+      <button type="button" class="rbtn" data-e="😂">😂</button><button type="button" class="rbtn" data-e="🔥">🔥</button><button type="button" class="rbtn" data-e="😭">😭</button><button type="button" class="rbtn" data-e="👏">👏</button>
+    </div>
+  </div>
 
   <div class="timer-wrap"><div id="timerBar" class="timer-bar"></div></div>
 
@@ -237,7 +260,7 @@
     </div>
   </div>
 
-  <div id="announce" class="announce hidden"></div>
+  <div id="toasts"></div>
   <!-- EFEK SERANGAN -->
   <div id="fx" class="fx hidden"><div class="fx-flash"></div><div id="fxIcon" class="fx-icon"></div><div id="fxText" class="fx-text"></div></div>
 
@@ -369,7 +392,7 @@
     let hearts = "";
     for (let i = 0; i < 5; i++) hearts += `<i class="fa-solid fa-heart hp-heart ${i >= (p.hp || 0) ? "lost" : ""}"></i>`;
     $("p1HpContainer").innerHTML = hearts;
-    $("rankBadge").textContent = `#${rank}/${total}`;
+    $("rankBadge").textContent = `🏆 #${rank}/${total}`;
   }
 
   // ===== Audio =====
@@ -435,9 +458,9 @@
     const f = FX[type] || FX.bolt, fx = $("fx"), bomb = type === "bomb", tall = type === "bolt";
     fx.classList.add("hidden"); void fx.offsetWidth;
     fx.className = `fx ${FX[type] ? type : "bolt"} ${dir}`;
-    $("fxText").textContent = type === "block"
+    announce(type === "block"
       ? (dir === "in" ? `🛡️ Perisaimu menahan serangan ${name}!` : `🛡️ Seranganmu diblok perisai ${name}`)
-      : `${f.i} ${f.l} ${dir === "in" ? "dari" : "ke"} ${name}${dmg ? ` −${dmg}` : ""}`;
+      : `${f.i} ${f.l} ${dir === "in" ? "dari" : "ke"} ${name}${dmg ? ` −${dmg}` : ""}`, dir === "in" ? "red" : "gold");
     const box = $("fxIcon"); box.innerHTML = "";
     for (let i = 0; i < (bomb ? 34 : 26); i++) {
       const p = document.createElement("span"), sz = 3 + Math.random() * 6;
@@ -453,14 +476,12 @@
   }
 
   // ===== Pengumuman =====
-  const annQ = []; let annBusy = false, prevState = null;
-  function announce(text, cls = "") { if (annQ.length > 3) annQ.shift(); annQ.push({ text, cls }); if (!annBusy) nextAnn(); }
-  function nextAnn() {
-    const el = $("announce"), it = annQ.shift();
-    if (!it) { annBusy = false; el.className = "announce hidden"; return; }
-    annBusy = true; el.className = "announce hidden"; void el.offsetWidth;
-    el.className = "announce " + it.cls; el.textContent = it.text;
-    setTimeout(nextAnn, 1900);
+  let prevState = null;
+  function announce(text, cls = "") {
+    const box = $("toasts");
+    while (box.children.length >= 3) box.firstChild.remove();
+    const d = document.createElement("div"); d.className = "ann " + cls; d.textContent = text; box.appendChild(d);
+    setTimeout(() => d.remove(), 2800);
   }
   function detectEvents(data, list) {
     if (!data.fightStarted) { prevState = null; return; }
@@ -499,12 +520,14 @@
 
   // ===== Item =====
   const ITEMS = { shield: "🛡️", scramble: "🔀", freeze: "❄️", heal: "💊" }, ILABEL = { shield: "Perisai", scramble: "Acak", freeze: "Beku", heal: "Heal" };
+  const HEAL_EXP = 25;
   let frozenUntil = 0, frozenTimer;
   function renderItems(me) {
     const inv = me.inv || {};
     $("itemBar").innerHTML = Object.keys(ITEMS).map((k) => { const n = inv[k] || 0;
-      return `<button type="button" data-it="${k}" class="it ${n ? "" : "off"}"><span class="it-i">${ITEMS[k]}</span><span>${ILABEL[k]}</span><b>${n}</b></button>`; }).join("");
+      return `<button type="button" data-it="${k}" title="${ILABEL[k]}" class="it ${n ? "" : "off"}"><span class="it-i">${ITEMS[k]}</span><b>${n}</b></button>`; }).join("");
   }
+  $("rankBadge").onclick = () => openStats();
   $("itemBar").onclick = (e) => { const b = e.target.closest("[data-it]"); if (b) useItem(b.dataset.it); };
   function giveItem(updates, base) {
     const inv = lastData.players[currentUser.uid].inv || {}, total = Object.values(inv).reduce((a, b) => a + (b || 0), 0);
@@ -528,8 +551,9 @@
     if (!me || me.done || (me.hp || 0) <= 0 || ((me.inv || {})[name] || 0) <= 0) return;
     const base = `rooms/${roomId}/players/${currentUser.uid}`, u = { [`${base}/inv/${name}`]: increment(-1) };
     if (name === "heal") {
-      if ((me.hp || 0) >= 5) return announce("💊 HP sudah penuh");
-      u[`${base}/hp`] = Math.min(5, (me.hp || 0) + 1); announce("💊 +1 HP!", "gold");
+      u[`${base}/hp`] = Math.min(5, (me.hp || 0) + 1);
+      u[`${base}/exp`] = increment(HEAL_EXP);
+      announce(`💊 +1 HP & +${HEAL_EXP} EXP!`, "gold");
     } else if (name === "shield") {
       u[`${base}/shield`] = (me.shield || 0) + 1; announce("🛡️ Perisai aktif — kebal 1 serangan", "gold");
     } else {
@@ -559,24 +583,42 @@
 
   // ===== Reaksi emoji =====
   const REACTS = ["😂", "🔥", "😭", "👏"]; let lastReactAt = null, lastReactSent = 0;
-  function floatReact(emoji, name) {
-    const s = document.createElement("div"); s.className = "react-float"; s.style.left = 8 + Math.random() * 72 + "%";
-    s.innerHTML = `<span>${emoji}</span><small>${esc(name)}</small>`; document.body.appendChild(s); setTimeout(() => s.remove(), 2200);
+  function floatReact(emoji, name, n = 1) {
+    for (let i = 0; i < n; i++) setTimeout(() => {
+      if (document.querySelectorAll(".react-float").length > 70) return;
+      const r = $("reactBar").getBoundingClientRect(), s = document.createElement("div");
+      s.className = "react-float";
+      s.style.cssText = `left:${r.left + Math.random() * r.width - 14}px;top:${r.top - 6}px;--sw:${(Math.random() - .5) * 120}px;--sc:${0.8 + Math.random() * 0.9};animation-duration:${1.8 + Math.random() * 1.2}s`;
+      s.innerHTML = `<span>${emoji}</span>` + (i === 0 && name ? `<small>${esc(name)}</small>` : "");
+      document.body.appendChild(s); setTimeout(() => s.remove(), 3300);
+    }, i * 70);
   }
-  document.querySelectorAll(".rbtn").forEach((b) => (b.onclick = () => {
-    if (!currentUser || Date.now() - lastReactSent < 1000) return;
-    lastReactSent = Date.now(); floatReact(b.dataset.e, "Kamu");
-    update(ref(db, `rooms/${roomId}`), { react: { emoji: b.dataset.e, from: currentUser.displayName || "Player", uid: currentUser.uid, at: Date.now() } }).catch(() => {});
-  }));
+  let holdTimer, holdEmoji = "", pendN = 0, lastSend = 0;
+  function flushReact(force) {
+    const now = Date.now();
+    if (!pendN || !currentUser || (!force && now - lastSend < 400)) return;
+    lastSend = now;
+    const n = Math.min(pendN * 2, 12); pendN = 0;
+    update(ref(db, `rooms/${roomId}`), { react: { emoji: holdEmoji, from: currentUser.displayName || "Player", uid: currentUser.uid, at: now, n } }).catch(() => {});
+  }
+  function tapReact() { floatReact(holdEmoji, "", 2); pendN++; flushReact(false); }
+  document.querySelectorAll(".rbtn").forEach((b) => {
+    b.addEventListener("pointerdown", (ev) => { ev.preventDefault(); holdEmoji = b.dataset.e; tapReact(); clearInterval(holdTimer); holdTimer = setInterval(tapReact, 160); });
+    ["pointerup", "pointerleave", "pointercancel"].forEach((t) => b.addEventListener(t, () => { clearInterval(holdTimer); flushReact(true); }));
+    b.addEventListener("contextmenu", (ev) => ev.preventDefault());
+  });
   function handleReact(data) {
     const r = data.react;
     if (lastReactAt === null) { lastReactAt = r ? r.at : 0; return; }
-    if (r && r.at !== lastReactAt) { lastReactAt = r.at; if (r.uid !== currentUser.uid && REACTS.includes(r.emoji)) floatReact(r.emoji, r.from); }
+    if (r && r.at !== lastReactAt) {
+      lastReactAt = r.at;
+      if (r.uid !== currentUser.uid && REACTS.includes(r.emoji)) floatReact(r.emoji, r.from, Math.min(Number(r.n) || 1, 12));
+    }
   }
 
   // ===== Rematch satu tap (host) =====
   function resetLocal() {
-    gameOverShown = false; doneSent = false; finishing = false; shownIndex = -1; streakInit = false; streak = 0; frozenUntil = 0; prevState = null; annQ.length = 0;
+    gameOverShown = false; doneSent = false; finishing = false; shownIndex = -1; streakInit = false; streak = 0; frozenUntil = 0; prevState = null; $("toasts").innerHTML = "";
     $("gameOverOverlay").classList.add("hidden");
     $("winnerText").classList.remove("text-yellow-400", "text-slate-200");
     $("btnRematch").disabled = false; $("btnRematch").textContent = "🔁 MAIN LAGI (REMATCH)";
